@@ -15,15 +15,17 @@ dependencies = [
     "stable-baselines3>=2.3",
     "sb3-contrib>=2.3",
     "pyyaml>=6.0",
+    "matplotlib>=3.7",
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]
 basilisk = ["bsk"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.setuptools]
+packages = ["sim", "sim.ops", "agent", "agent.env", "agent.policy"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src"]
+testpaths = ["sim/tests", "agent/tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+pythonpath = ["."]

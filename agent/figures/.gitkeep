@@ -1,0 +1,2 @@
+# Сюда складываем сравнение подходов: JSON/таблицы, графики.
+# Файл comparison.json пишет python -m agent.baseline.

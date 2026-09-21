@@ -1,0 +1,179 @@
+"""Прогон политики на сценарии кейса с записью журнала смены.
+
+Журнал (`cosmo-B-ops-result-1.0`) — то, чем по критериям кейса подтверждаются
+выводы о простоях и потерях, поэтому его целостность сразу проверяется
+`replay_episode` из библиотеки организаторов.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+from typing import Callable
+
+import numpy as np
+
+from agent.env.ops_env import EventConfig, OpsEnv
+from agent.greedy import greedy_action, random_masked_action
+from sim.ops import load, load_events, replay_episode, resolve_scenario
+from sim.ops.scenarios import EVENTS_DEMO
+
+Actor = Callable[[dict], np.ndarray]
+
+
+def run_episode(env: OpsEnv, actor: Actor, seed: int | None = None) -> dict:
+    obs, _ = env.reset(seed=seed)
+    total = 0.0
+    steps = 0
+    terminated = truncated = False
+    info: dict = {}
+    while not (terminated or truncated):
+        obs, reward, terminated, truncated, info = env.step(actor(obs))
+        total += float(reward)
+        steps += 1
+    return {
+        "return": total,
+        "steps": steps,
+        "summary": info.get("summary", {}),
+        "ops": info.get("ops", {}),
+    }
+
+
+def make_actor(
+    policy: str,
+    model_path: str | Path | None,
+    downlink_limit: int,
+    rng: np.random.Generator,
+) -> Actor:
+    if policy == "ppo":
+        from sb3_contrib import MaskablePPO
+
+        if model_path is None:
+            raise ValueError("Для policy=ppo нужен --model")
+        model = MaskablePPO.load(str(model_path))
+
+        def actor(obs: dict) -> np.ndarray:
+            masks = np.asarray(obs["mask"], dtype=bool).reshape(-1)
+            action, _ = model.predict(obs, action_masks=masks, deterministic=True)
+            return np.asarray(action)
+
+        return actor
+    if policy == "random":
+        return lambda obs: random_masked_action(obs, rng)
+    return lambda obs: greedy_action(obs, downlink_limit=downlink_limit)
+
+
+def evaluate(
+    scenario: str | Path = "p02",
+    goal: str = "priority",
+    policy: str = "greedy",
+    model_path: str | Path | None = None,
+    episodes: int = 1,
+    events: str = "demo",
+    seed: int = 0,
+    top_k: int = 32,
+    journal_dir: str | Path | None = None,
+) -> dict:
+    path = resolve_scenario(scenario)
+    spec = load(path)
+    scripted: list[dict] = []
+    event_cfg = EventConfig.off()
+    if events == "demo":
+        try:
+            scripted = load_events(EVENTS_DEMO, spec)
+        except ValueError:
+            scripted = []  # events_demo привязан к P02
+    elif events == "random":
+        event_cfg = EventConfig()
+
+    rng = np.random.default_rng(seed)
+    env = OpsEnv(
+        scenario=spec,
+        goal=goal,
+        events=event_cfg,
+        scripted_events=scripted,
+        top_k=top_k,
+        seed=seed,
+    )
+    actor = make_actor(policy, model_path, env.downlink_limit, rng)
+
+    rows = []
+    for i in range(episodes):
+        row = run_episode(env, actor, seed=seed + i)
+        if journal_dir is not None:
+            row["journal"] = str(_write_journal(env, Path(journal_dir), i))
+        rows.append(row)
+
+    def mean(getter) -> float:
+        return float(np.mean([getter(r) for r in rows]))
+
+    return {
+        "scenario": spec["meta"]["id"],
+        "policy": policy,
+        "goal": goal,
+        "events": events,
+        "episodes": episodes,
+        "mean_return": mean(lambda r: r["return"]),
+        "jobs_completed": mean(lambda r: r["summary"].get("jobs_completed", 0)),
+        "jobs_due_missed": mean(lambda r: r["summary"].get("jobs_due_missed", 0)),
+        "critical_done_on_time": mean(
+            lambda r: r["summary"].get("critical_jobs_completed_on_time", 0)
+        ),
+        "critical_due": mean(lambda r: r["summary"].get("critical_jobs_due", 0)),
+        "revenue_usd": mean(lambda r: r["summary"].get("revenue_usd", 0.0)),
+        "below_reserve_steps": mean(lambda r: r["summary"].get("below_reserve_satellite_steps", 0)),
+        "brownout_steps": mean(lambda r: r["summary"].get("brownout_satellite_steps", 0)),
+        "min_soc_pct": mean(lambda r: r["summary"].get("minimum_soc_pct", 0.0)),
+        "blocked_commands": mean(lambda r: r["summary"].get("blocked_command_count", 0)),
+        "idle_share": mean(lambda r: r["ops"].get("idle_share", 0.0)),
+        "calibrate_share": mean(lambda r: r["ops"].get("calibrate_share", 0.0)),
+        "job_share": mean(lambda r: r["ops"].get("job_share", 0.0)),
+        "executor_switches": mean(lambda r: r["ops"].get("executor_switches", 0.0)),
+        "conflicts_repaired": mean(lambda r: r["ops"].get("conflicts_repaired", 0.0)),
+        "episodes_detail": [{k: v for k, v in r.items() if k != "ops"} for r in rows],
+    }
+
+
+def _write_journal(env: OpsEnv, out_dir: Path, episode: int) -> Path:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    record = env.journal()
+    replayed = replay_episode(
+        record["initial_scenario"], record["events"], record["commands"], record["steps_executed"]
+    )
+    if replayed.summary() != record["summary"]:
+        raise RuntimeError("Журнал не воспроизводится: расхождение с replay_episode")
+    path = out_dir / f"journal_{episode}.json"
+    path.write_text(json.dumps(record, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
+    return path
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Оценка политики на сценарии кейса")
+    parser.add_argument("--scenario", default="p02")
+    parser.add_argument("--goal", default="priority", choices=["priority", "revenue"])
+    parser.add_argument("--policy", default="greedy", choices=["greedy", "random", "ppo"])
+    parser.add_argument("--model", default=None)
+    parser.add_argument("--episodes", type=int, default=1)
+    parser.add_argument("--events", default="demo", choices=["demo", "random", "none"])
+    parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--top-k", type=int, default=32)
+    parser.add_argument("--journal", default=None, help="каталог для journal_<episode>.json")
+    args = parser.parse_args()
+    report = evaluate(
+        scenario=args.scenario,
+        goal=args.goal,
+        policy=args.policy,
+        model_path=args.model,
+        episodes=args.episodes,
+        events=args.events,
+        seed=args.seed,
+        top_k=args.top_k,
+        journal_dir=args.journal,
+    )
+    report.pop("episodes_detail", None)
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+
+if __name__ == "__main__":
+    main()
