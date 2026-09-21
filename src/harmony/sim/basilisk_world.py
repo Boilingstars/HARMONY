@@ -250,6 +250,16 @@ class BasiliskWorld:
     def set_battery_ws(self, sat_i: int, value: float) -> None:
         self._analytic.set_battery_ws(sat_i, value)
 
+    def sim_handles(self) -> dict | None:
+        """Basilisk objects for optional Vizard / extra modules. None until reset()."""
+        if self._sim is None:
+            return None
+        return {
+            "sim": self._sim,
+            "spacecraft": list(self._scs),
+            "task_name": "dynTask",
+        }
+
 
 def basilisk_from_config(cfg: dict) -> BasiliskWorld:
     lo, hi = cfg.get("battery_init_frac", [0.45, 0.95])

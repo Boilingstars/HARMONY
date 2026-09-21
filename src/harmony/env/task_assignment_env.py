@@ -20,7 +20,7 @@ from harmony.env.features import (
     encode_task,
     pack_obs,
 )
-from harmony.sim.coverage import footprint_radius
+from harmony.sim.condition import sat_condition
 from harmony.sim.kepler import KeplerWorld, kepler_from_config
 
 
@@ -380,29 +380,25 @@ class TaskAssignmentEnv(gym.Env):
             self._masks = masks
             return masks
         for i, sat in enumerate(self.sats):
-            if len(sat.queue) >= self.max_queue:
-                continue
-            if float(np.dot(sat.capability, task.capability)) <= 0.0:
-                continue
-            t_free = self.world.t + self._time_until_free(i)
-            access = self.world.access_remaining(i, task.lat, task.lon, t_free)
-            if access <= 0.0:
-                continue
-            slice_s = min(access, task.duration, self.min_work_slice_s)
-            energy_need = task.power_need * slice_s
-            if self.world.battery_ws(i) < energy_need:
-                continue
-            masks[i] = True
+            cond = sat_condition(
+                self.world,
+                i,
+                task,
+                time_until_free=self._time_until_free(i),
+                queue_length=len(sat.queue),
+                capability=sat.capability,
+                max_queue=self.max_queue,
+                min_work_slice_s=self.min_work_slice_s,
+            )
+            masks[i] = cond.can_work
         self._masks = masks
         return masks
 
     def _observe(self) -> np.ndarray:
         if self.current is None:
             task_vec = np.zeros(self.feat_spec.task_dim, dtype=np.float32)
-            lat = lon = 0.0
         else:
             tsk = self.current
-            lat, lon = tsk.lat, tsk.lon
             task_vec = encode_task(
                 self.feat_spec,
                 tsk.lat,
@@ -415,28 +411,32 @@ class TaskAssignmentEnv(gym.Env):
             )
         sats = []
         for i, sat in enumerate(self.sats):
-            lat_now, lon_now, alt = self.world.lla(i)
-            t_free = self._time_until_free(i)
-            lat_f, lon_f, _ = self.world.lla(i, self.world.t + t_free)
-            access = 0.0
-            if self.current is not None:
-                access = self.world.access_remaining(i, lat, lon, self.world.t + t_free)
+            cond = sat_condition(
+                self.world,
+                i,
+                self.current,
+                time_until_free=self._time_until_free(i),
+                queue_length=len(sat.queue),
+                capability=sat.capability,
+                max_queue=self.max_queue,
+                min_work_slice_s=self.min_work_slice_s,
+            )
             sats.append(
                 encode_sat(
                     self.feat_spec,
-                    lat_now,
-                    lon_now,
-                    alt,
-                    lat_f,
-                    lon_f,
-                    footprint_radius(alt, self.world.min_elev),
-                    self.world.battery_frac(i),
-                    self._status(i),
-                    len(sat.queue),
-                    t_free,
+                    cond.lat,
+                    cond.lon,
+                    cond.alt,
+                    cond.lat_free,
+                    cond.lon_free,
+                    cond.footprint_radius,
+                    cond.battery,
+                    cond.status,
+                    cond.queue_length,
+                    cond.time_until_free,
                     sat.capability,
-                    access,
-                    self.world.time_to_sun_change(i),
+                    cond.access_remaining,
+                    cond.time_to_sun_change,
                 )
             )
         n_stack = len(self.stack) + (1 if self.current is not None else 0)
