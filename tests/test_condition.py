@@ -58,7 +58,7 @@ def test_autonomous_cnp_runs_on_kepler(monkeypatch):
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
-    import autonomous
+    from autonomous import autonomous
 
     monkeypatch.setattr(autonomous, "ENABLE_VIZARD", False)
 
