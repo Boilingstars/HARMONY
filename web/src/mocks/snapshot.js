@@ -283,7 +283,6 @@ function enrichSatFromFile(sat, step, model) {
     sat.energy_wh != null ? (100 * sat.energy_wh) / capacity_wh : 0
   );
   const energy_wh = sat.energy_wh ?? (capacity_wh * socPct) / 100;
-  const soc = (100 * energy_wh) / capacity_wh;
   const temp_c = sat.temp_c ?? sat.initial_temp_c ?? 0;
   const calibration_age_steps = sat.calibration_age_steps ?? sat.initial_calibration_age_steps ?? 0;
   const available = sat.available !== false;
@@ -293,13 +292,7 @@ function enrichSatFromFile(sat, step, model) {
   if (!action) {
     action = 'idle';
     if (!available) idle_reason = idle_reason || 'satellite_unavailable';
-    else if (calibration_age_steps > model.calibration_valid_steps) {
-      idle_reason = idle_reason || 'calibration_required';
-    } else if (soc < model.reserve_soc_pct) {
-      idle_reason = idle_reason || 'energy_reserve';
-    }
   }
-  const len = Math.max(2, step + 1);
   return {
     ...sat,
     capacity_wh,
@@ -310,15 +303,10 @@ function enrichSatFromFile(sat, step, model) {
     action,
     job_id,
     idle_reason,
-    rejected: sat.rejected || (idle_reason
-      ? [{ step: Math.max(0, step - 1), requested: { action: 'job' }, reason: idle_reason }]
-      : []),
-    action_tape: sat.action_tape || [
-      { step: Math.max(0, step - 1), action: 'idle' },
-      { step, action, job_id },
-    ],
-    soc_series: sat.soc_series || series(len, soc + 4, -0.08, 0.9),
-    temp_series: sat.temp_series || series(len, temp_c || 16, 0.02, 0.3),
+    rejected: sat.rejected || [],
+    action_tape: sat.action_tape || [],
+    soc_series: sat.soc_series || [],
+    temp_series: sat.temp_series || [],
   };
 }
 

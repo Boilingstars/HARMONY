@@ -141,6 +141,105 @@ def test_third_downlink_in_a_tick_becomes_idle(p01):
     assert all(r["reason"] in ("accepted", "idle") for r in rows)
 
 
+def test_third_downlink_with_relay_is_reassigned(p01):
+    """Третий сброс гасится, но КА берёт контактный relay, а не ждёт."""
+    env = _env(p01)
+    env.reset(seed=0)
+    inner = env.session.env
+    k = inner.k
+    chosen = env.sat_ids[:3]
+    jobs = []
+    for i, sid in enumerate(chosen):
+        inner.s["environment"][sid]["downlink_available"][k] = True
+        inner.s["environment"][sid]["relay_available"][k] = True
+        inner.state[sid]["calibration_age_steps"] = 0
+        jobs.append(
+            {
+                "id": f"DL-{i}",
+                "kind": "downlink",
+                "release_step": k,
+                "deadline_step": k + 3,
+                "work_steps": 1,
+                "eligible_satellites": [sid],
+                "priority": 3,
+                "value_usd": 10.0 * (i + 1),
+            }
+        )
+    jobs.append(
+        {
+            "id": "RL-fill",
+            "kind": "relay",
+            "release_step": k,
+            "deadline_step": k + 3,
+            "work_steps": 1,
+            "eligible_satellites": [chosen[0]],
+            "priority": 2,
+            "value_usd": 5.0,
+        }
+    )
+    env.session.apply_event({"id": "T-dl-rl", "at_step": k, "type": "add_jobs", "jobs": jobs})
+    env._observe()
+    slots = {c.job_id: slot for slot, c in enumerate(env._candidates)}
+    action = _all_idle(env)
+    for job in jobs[:3]:
+        slot = slots[job["id"]]
+        index = env.sat_ids.index(job["eligible_satellites"][0])
+        action[index] = slot
+    env.step(action)
+    rows = inner.trace[-env.n_sats :]
+    executed = {r["satellite_id"]: r["requested"]["job_id"] for r in rows if r["executed"] == "job"}
+    assert executed[chosen[1]] == "DL-1"
+    assert executed[chosen[2]] == "DL-2"
+    assert executed[chosen[0]] == "RL-fill"
+    assert env.ops_stats["conflicts_repaired"] == 1
+
+
+def test_unique_downlink_preempts_relay(p01):
+    """Единственный исполнитель prio-3 сброса забирает КА у relay; relay уходит соседу."""
+    env = _env(p01)
+    env.reset(seed=0)
+    inner = env.session.env
+    k = inner.k
+    first, second = "S05", "S07"
+    jobs = [
+        {
+            "id": "RL-hold",
+            "kind": "relay",
+            "release_step": k,
+            "deadline_step": k + 5,
+            "work_steps": 2,
+            "eligible_satellites": [first, second],
+            "priority": 2,
+            "value_usd": 10.0,
+        },
+        {
+            "id": "DL-P3",
+            "kind": "downlink",
+            "release_step": k,
+            "deadline_step": k + 5,
+            "work_steps": 1,
+            "eligible_satellites": [first],
+            "priority": 3,
+            "value_usd": 20.0,
+        },
+    ]
+    for sid in (first, second):
+        inner.s["environment"][sid]["relay_available"][k] = True
+        inner.s["environment"][sid]["downlink_available"][k] = True
+        inner.state[sid]["calibration_age_steps"] = 0
+    env.session.apply_event({"id": "T-preempt", "at_step": k, "type": "add_jobs", "jobs": jobs})
+    env._observe()
+    slots = {c.job_id: slot for slot, c in enumerate(env._candidates)}
+    action = _all_idle(env)
+    action[env.sat_ids.index(first)] = slots["RL-hold"]
+    env.step(action)
+    rows = {r["satellite_id"]: r for r in inner.trace[-env.n_sats :]}
+    assert rows[first]["executed"] == "job"
+    assert rows[first]["requested"]["job_id"] == "DL-P3"
+    assert rows[second]["executed"] == "job"
+    assert rows[second]["requested"]["job_id"] == "RL-hold"
+
+
 def test_unique_job_per_step_and_downlink_cap():
     """Приказ «всем первое допустимое задание» не ломает ограничения кейса."""
     env = _env(load(P02_SHIFT))
@@ -336,6 +435,79 @@ def test_scripted_events_demo_matches_p02():
         env.step(_all_idle(env))
     applied = {e["id"] for e in env.session.events}
     assert {"E-01", "E-02"} <= applied
+
+
+def test_early_calibrate_pays_less_than_idle(p01):
+    """Калибровка в начале допуска хуже ожидания; у порога greedy она бесплатна."""
+    sid_index = 0
+
+    def one_step(age: int, calibrate: bool) -> float:
+        env = _env(p01)
+        env.reset(seed=0)
+        sid = env.sat_ids[sid_index]
+        env.session.env.state[sid]["calibration_age_steps"] = age
+        env._observe()
+        action = _all_idle(env)
+        if calibrate:
+            assert env._mask[sid_index, env.calibrate_index]
+            action[sid_index] = env.calibrate_index
+        _, reward, _, _, _ = env.step(action)
+        return reward
+
+    early = 0
+    valid = p01["model"]["calibration_valid_steps"]
+    late = valid - 1  # ещё можно калибровать, и age/valid уже выше порога 0.85
+    idle_reward = one_step(early, calibrate=False)
+    early_reward = one_step(early, calibrate=True)
+    late_reward = one_step(late, calibrate=True)
+    assert early_reward < idle_reward
+    assert late_reward == pytest.approx(idle_reward)
+
+
+def test_duplicate_job_pays_less_than_two_different(p01):
+    """Два аппарата на одном задании хуже, чем два разных: repair плюс штраф."""
+
+    def setup() -> tuple[OpsEnv, dict[str, int]]:
+        env = _env(p01)
+        env.reset(seed=0)
+        inner = env.session.env
+        k = inner.k
+        sats = env.sat_ids[:2]
+        for sid in sats:
+            inner.s["environment"][sid]["relay_available"][k] = True
+            inner.state[sid]["calibration_age_steps"] = 0
+        jobs = [
+            {
+                "id": f"RL-{i}",
+                "kind": "relay",
+                "release_step": k,
+                "deadline_step": k + 3,
+                "work_steps": 1,
+                "eligible_satellites": list(sats),
+                "priority": 3,
+                "value_usd": 10.0,
+            }
+            for i in range(2)
+        ]
+        env.session.apply_event({"id": "T-rl", "at_step": k, "type": "add_jobs", "jobs": jobs})
+        env._observe()
+        slots = {c.job_id: slot for slot, c in enumerate(env._candidates)}
+        return env, slots
+
+    dup, slots = setup()
+    action = _all_idle(dup)
+    action[0] = slots["RL-0"]
+    action[1] = slots["RL-0"]
+    _, dup_reward, _, _, _ = dup.step(action)
+    assert dup.ops_stats["conflicts_repaired"] == 1
+
+    split, slots = setup()
+    action = _all_idle(split)
+    action[0] = slots["RL-0"]
+    action[1] = slots["RL-1"]
+    _, split_reward, _, _, _ = split.step(action)
+    assert split.ops_stats["conflicts_repaired"] == 0
+    assert dup_reward < split_reward
 
 
 def test_two_goals_score_the_same_step_differently(p01):

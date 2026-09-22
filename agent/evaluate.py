@@ -40,22 +40,41 @@ def run_episode(env: OpsEnv, actor: Actor, seed: int | None = None) -> dict:
     }
 
 
+def _load_ppo(model_path: str | Path):
+    """Веса политики без оптимизатора: чекпоинт может быть с двумя группами Adam."""
+    from sb3_contrib import MaskablePPO
+
+    original = MaskablePPO.set_parameters
+
+    def _set(self, params, exact_match=True, device="auto"):
+        policy_only = {key: value for key, value in params.items() if "optimizer" not in key}
+        return original(self, policy_only, exact_match=False, device=device)
+
+    MaskablePPO.set_parameters = _set  # type: ignore[method-assign]
+    try:
+        return MaskablePPO.load(str(model_path))
+    finally:
+        MaskablePPO.set_parameters = original  # type: ignore[method-assign]
+
+
 def make_actor(
     policy: str,
     model_path: str | Path | None,
     downlink_limit: int,
     rng: np.random.Generator,
+    deterministic: bool = False,
 ) -> Actor:
     if policy == "ppo":
-        from sb3_contrib import MaskablePPO
-
         if model_path is None:
             raise ValueError("Для policy=ppo нужен --model")
-        model = MaskablePPO.load(str(model_path))
+        model = _load_ppo(model_path)
 
         def actor(obs: dict) -> np.ndarray:
             masks = np.asarray(obs["mask"], dtype=bool).reshape(-1)
-            action, _ = model.predict(obs, action_masks=masks, deterministic=True)
+            # По умолчанию сэмплируем, как MaskablePPO при обучении. Argmax по
+            # 48 категориальным (idle — один класс, задания размазаны по K)
+            # почти всегда выбирает ожидание, даже когда доля заданий ~13%.
+            action, _ = model.predict(obs, action_masks=masks, deterministic=deterministic)
             return np.asarray(action)
 
         return actor
@@ -74,6 +93,7 @@ def evaluate(
     seed: int = 0,
     top_k: int = 32,
     journal_dir: str | Path | None = None,
+    deterministic: bool = False,
 ) -> dict:
     path = resolve_scenario(scenario)
     spec = load(path)
@@ -96,7 +116,11 @@ def evaluate(
         top_k=top_k,
         seed=seed,
     )
-    actor = make_actor(policy, model_path, env.downlink_limit, rng)
+    actor = make_actor(policy, model_path, env.downlink_limit, rng, deterministic=deterministic)
+    if policy == "ppo" and not deterministic:
+        import torch
+
+        torch.manual_seed(seed)
 
     rows = []
     for i in range(episodes):
@@ -114,6 +138,7 @@ def evaluate(
         "goal": goal,
         "events": events,
         "episodes": episodes,
+        "deterministic": bool(deterministic) if policy == "ppo" else True,
         "mean_return": mean(lambda r: r["return"]),
         "jobs_completed": mean(lambda r: r["summary"].get("jobs_completed", 0)),
         "jobs_due_missed": mean(lambda r: r["summary"].get("jobs_due_missed", 0)),
@@ -159,6 +184,11 @@ def main() -> None:
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--top-k", type=int, default=32)
     parser.add_argument("--journal", default=None, help="каталог для journal_<episode>.json")
+    parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="argmax вместо сэмпла; для PPO почти всегда idle",
+    )
     args = parser.parse_args()
     report = evaluate(
         scenario=args.scenario,
@@ -170,6 +200,7 @@ def main() -> None:
         seed=args.seed,
         top_k=args.top_k,
         journal_dir=args.journal,
+        deterministic=args.deterministic,
     )
     report.pop("episodes_detail", None)
     print(json.dumps(report, indent=2, ensure_ascii=False))

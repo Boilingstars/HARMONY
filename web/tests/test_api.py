@@ -54,3 +54,254 @@ def test_tracks_stream_matches_steps():
     assert abs(frames[0]["pos"][0][1] - at_0["lon"]) < 0.02
     assert abs(frames[10]["pos"][0][0] - at_10["lat"]) < 0.02
     assert abs(frames[10]["pos"][0][1] - at_10["lon"]) < 0.02
+
+
+def test_dispatch_stream_without_checkpoint(monkeypatch):
+    """Схема потока на жадном акторе: чекпоинт и сеть не грузятся."""
+    import os
+
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    from agent.greedy import greedy_action
+
+    import web.api.main as main_mod
+    from web.api import dispatch as dispatch_mod
+
+    def actor_for(scenario):
+        limit = int(scenario["model"]["downlink_parallel_limit"])
+
+        def actor(obs, _limit=limit):
+            return greedy_action(obs, downlink_limit=_limit)
+
+        return actor
+
+    monkeypatch.setattr(dispatch_mod, "actor_for", actor_for)
+    dispatch_mod.clear()
+    main_mod._shift = None
+    data = json.loads(_P01.read_text(encoding="utf-8"))
+    client = TestClient(app)
+    missing = client.get("/api/dispatch")
+    assert missing.status_code == 409
+
+    assert client.post("/api/scenario", json=data).status_code == 200
+    first = client.get("/api/dispatch")
+    assert first.status_code == 200
+    second = client.get("/api/dispatch")
+    assert second.text == first.text
+
+    rows = [json.loads(line) for line in first.text.splitlines() if line.strip()]
+    meta = rows[0]
+    assert meta["type"] == "meta"
+    assert meta["ids"] == [sat["id"] for sat in data["satellites"]]
+    assert [job["id"] for job in meta["jobs"]] == [job["id"] for job in data["jobs"]]
+    frames = [row for row in rows if row["type"] == "frame"]
+    assert [row["step"] for row in frames] == list(range(data["time"]["steps"] + 1))
+    assert frames[0]["job"] == []
+    assert frames[0]["missed"] == []
+    assert frames[0]["metrics"]["revenue_usd"] == 0
+    assert all(len(row["sat"]) == len(meta["ids"]) for row in frames)
+    assert all(len(cell) == 5 and cell[3] in (0, 1, 2) for row in frames for cell in row["sat"])
+    assert all(isinstance(row.get("open"), list) for row in frames)
+    assert all(len(row["take"]) == len(meta["ids"]) for row in frames)
+    assert all(v in (0, 1) for row in frames for v in row["take"])
+    n_jobs = len(meta["jobs"])
+    assert all(0 <= i < n_jobs for row in frames for i in row["open"])
+    if any(row["open"] for row in frames):
+        assert any(row["take"].count(1) for row in frames if row["open"])
+    done = [0] * len(meta["jobs"])
+    for frame in frames:
+        for index, _rem, ex, flag in frame["job"]:
+            assert 0 <= index < len(meta["jobs"])
+            assert ex == -1 or 0 <= ex < len(meta["ids"])
+            done[index] = flag
+        assert frame["metrics"]["blocked_command_count"] == 0
+    revenue = sum(meta["jobs"][i]["value_usd"] for i, flag in enumerate(done) if flag)
+    assert frames[-1]["metrics"]["jobs_completed"] == sum(done)
+    assert abs(frames[-1]["metrics"]["revenue_usd"] - revenue) < 1e-4
+
+    packed = client.get("/api/result")
+    assert packed.status_code == 200
+    body = packed.json()
+    assert body["schema_version"] == "cosmo-B-ops-result-1.0"
+    assert body["summary"]["jobs_completed"] == frames[-1]["metrics"]["jobs_completed"]
+    assert body["steps_executed"] == data["time"]["steps"]
+    assert meta["jobs_seed"] == len(data["jobs"])
+    assert all(0 <= row["q"] <= 1 for row in frames)
+
+
+def test_alt_dispatch_stream_without_checkpoint(monkeypatch):
+    import os
+
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    from agent.greedy import greedy_action
+
+    import web.api.main as main_mod
+    from web.api import dispatch as dispatch_mod
+
+    def actor_for(scenario):
+        limit = int(scenario["model"]["downlink_parallel_limit"])
+
+        def actor(obs, _limit=limit):
+            return greedy_action(obs, downlink_limit=_limit)
+
+        return actor
+
+    monkeypatch.setattr(dispatch_mod, "actor_for", actor_for)
+    monkeypatch.setattr(dispatch_mod, "actor_for_alt", actor_for)
+    dispatch_mod.clear()
+    main_mod._shift = None
+    data = json.loads(_P01.read_text(encoding="utf-8"))
+    client = TestClient(app)
+    assert client.post("/api/scenario", json=data).status_code == 200
+    raw = client.get("/api/dispatch/alt")
+    assert raw.status_code == 200
+    rows = [json.loads(line) for line in raw.text.splitlines() if line.strip()]
+    alts = [row for row in rows if row["type"] == "alt"]
+    assert [row["step"] for row in alts] == list(range(data["time"]["steps"] + 1))
+    assert all("metrics" in row and "revenue_usd" in row["metrics"] for row in alts)
+    assert alts[0]["metrics"]["revenue_usd"] == 0
+    assert alts[-1]["metrics"]["jobs_completed"] >= 0
+
+
+def _core(frame: dict) -> dict:
+    return {key: frame[key] for key in ("step", "sat", "job", "missed", "metrics")}
+
+
+def test_resume_add_jobs_replays_prefix(monkeypatch):
+    """add_jobs на шаге 5: прошлое совпадает, сеть/greedy только с k, хвост расходится."""
+    import os
+
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    from agent.greedy import greedy_action
+
+    import web.api.main as main_mod
+    from web.api import dispatch as dispatch_mod
+
+    calls = {"n": 0}
+
+    def actor_for(scenario):
+        limit = int(scenario["model"]["downlink_parallel_limit"])
+
+        def actor(obs, _limit=limit):
+            calls["n"] += 1
+            return greedy_action(obs, downlink_limit=_limit)
+
+        return actor
+
+    def actor_alt(scenario):
+        limit = int(scenario["model"]["downlink_parallel_limit"])
+
+        def actor(obs, _limit=limit):
+            return greedy_action(obs, downlink_limit=_limit)
+
+        return actor
+
+    monkeypatch.setattr(dispatch_mod, "actor_for", actor_for)
+    monkeypatch.setattr(dispatch_mod, "actor_for_alt", actor_alt)
+    dispatch_mod.clear()
+    main_mod._shift = None
+    data = json.loads(_P01.read_text(encoding="utf-8"))
+    event = {
+        "id": "E-T",
+        "at_step": 5,
+        "type": "add_jobs",
+        "jobs": [
+            {
+                "id": "URG-T",
+                "kind": "relay",
+                "release_step": 5,
+                "deadline_step": 16,
+                "work_steps": 3,
+                "eligible_satellites": [sat["id"] for sat in data["satellites"]],
+                "priority": 3,
+                "value_usd": 999.0,
+            }
+        ],
+    }
+
+    run_a = dispatch_mod.Run("a")
+    seq_a = list(
+        dispatch_mod.iter_events(data, actor_for(data), run=run_a, goal="priority")
+    )
+    frames_a = [row for row in seq_a if row["type"] == "frame"]
+    n_first = calls["n"]
+    assert n_first == data["time"]["steps"]
+    replay = [item.copy() for item in run_a.actions[:5]]
+    calls["n"] = 0
+
+    run_b = dispatch_mod.Run("b")
+    seq_b = list(
+        dispatch_mod.iter_events(
+            data,
+            actor_for(data),
+            goal="revenue",
+            scripted_events=[event],
+            replay_actions=replay,
+            from_step=5,
+            run=run_b,
+        )
+    )
+    frames_b = [row for row in seq_b if row["type"] == "frame"]
+    assert calls["n"] == data["time"]["steps"] - 5
+    assert frames_b[0]["step"] == 5
+    assert _core(frames_a[5]) == _core(frames_b[0])
+    assert any(job["id"] == "URG-T" for row in seq_b if row["type"] == "meta" for job in row["jobs"])
+    assert any(
+        _core(frames_a[row["step"]]) != _core(row)
+        for row in frames_b
+        if row["step"] > 5
+    )
+
+    client = TestClient(app)
+    dispatch_mod.clear()
+    main_mod._shift = None
+    calls["n"] = 0
+    assert client.post("/api/scenario", json=data).status_code == 200
+    first = client.get("/api/dispatch")
+    assert first.status_code == 200
+    first_frames = [
+        json.loads(line) for line in first.text.splitlines() if line.strip()
+    ]
+    first_frames = [row for row in first_frames if row["type"] == "frame"]
+    n_http = calls["n"]
+    calls["n"] = 0
+    resumed = client.post(
+        "/api/dispatch/resume",
+        json={"step": 5, "events": [event], "goal": "priority"},
+    )
+    assert resumed.status_code == 200
+    rows = [json.loads(line) for line in resumed.text.splitlines() if line.strip()]
+    assert calls["n"] == n_http - 5
+    resume_frames = [row for row in rows if row["type"] == "frame"]
+    assert resume_frames[0]["step"] == 5
+    assert _core(first_frames[5]) == _core(resume_frames[0])
+    assert all(row["step"] >= 5 for row in resume_frames)
+    assert any(job["id"] == "URG-T" for row in rows if row["type"] == "meta" for job in row["jobs"])
+
+
+def test_openapi_covers_api_routes():
+    client = TestClient(app)
+    spec = client.get("/api/openapi.json")
+    assert spec.status_code == 200
+    paths = spec.json()["paths"]
+    for route in (
+        "/api/scenario",
+        "/api/orbits",
+        "/api/tracks",
+        "/api/dispatch",
+        "/api/dispatch/resume",
+        "/api/dispatch/alt",
+        "/api/result",
+    ):
+        assert route in paths
+    frame = paths["/api/dispatch"]["get"]
+    assert "ckpt_68120" in spec.json()["info"]["description"]
+    yaml_body = client.get("/api/openapi.yaml")
+    assert yaml_body.status_code == 200
+    docs = client.get("/api/docs")
+    assert docs.status_code == 200

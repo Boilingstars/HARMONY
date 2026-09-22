@@ -2,9 +2,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+.cursor/
 *.zip
+!agent/runs/**/*.zip
 agent/models/best/
-agent/runs/
 agent/*.out
 agent/figures/comparison.json
 _pycheck.txt

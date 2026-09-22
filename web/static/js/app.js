@@ -1,20 +1,44 @@
-import { mountSplash } from './views/SplashScreen.js';
+import { mountSplash } from './views/SplashScreen.js?v=palette1';
+import { beginTransfer, endTransfer } from './transferOverlay.js?v=resume-events';
 
 const splashRoot = document.getElementById('splash-root');
 const consoleEl = document.getElementById('console');
 if (consoleEl) consoleEl.hidden = true;
 
+function waitFirst(onEvent, ready) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      off();
+      resolve();
+    };
+    const off = onEvent((msg) => {
+      if (ready(msg)) finish();
+    });
+    setTimeout(finish, 20000);
+  });
+}
+
 mountSplash(splashRoot, {
   async onStartShift(scenario) {
-    const [{ snapshotFromScenario }, { startConsole }, { postScenario, primeTracks }] = await Promise.all([
-      import('./scenario.js'),
-      import('./consoleApp.js'),
-      import('./api.js'),
-    ]);
-    const listed = await postScenario(scenario);
-    primeTracks();
-    splashRoot.innerHTML = '';
-    splashRoot.hidden = true;
-    startConsole(snapshotFromScenario(scenario, listed));
+    beginTransfer();
+    try {
+      const [{ snapshotFromScenario }, { startConsole }, { postScenario, onTrack, onDispatch }] = await Promise.all([
+        import('./scenario.js'),
+        import('./consoleApp.js?v=job-green'),
+        import('./api.js?v=delta1'),
+      ]);
+      const listed = await postScenario(scenario);
+      const tracksReady = waitFirst(onTrack, (msg) => msg.type === 'orbits' || msg.type === 'error');
+      const dispatchReady = waitFirst(onDispatch, (msg) => msg.type === 'frame' || msg.type === 'error');
+      splashRoot.innerHTML = '';
+      splashRoot.hidden = true;
+      startConsole(snapshotFromScenario(scenario, listed));
+      await Promise.all([tracksReady, dispatchReady]);
+    } finally {
+      endTransfer();
+    }
   },
 });

@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import json
+import csv
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -65,13 +66,54 @@ def make_run_dir(scenario_id: str, goal: str, root: Path | str | None = None) ->
     return run_dir
 
 
-def configure_run_logger(run_dir: Path | str, tensorboard: bool = False) -> Logger:
+class _ResumingCSVOutputFormat(CSVOutputFormat):
+    """Дописывает progress.csv, не обнуляя уже записанные rollout."""
+
+    def __init__(self, filename: str):
+        self.file = open(filename, "r+", encoding="utf-8", newline="")
+        header = self.file.readline()
+        self.keys = [key.strip() for key in header.strip().split(",")] if header.strip() else []
+        self.separator = ","
+        self.quotechar = '"'
+        self.file.seek(0, 2)
+
+
+def last_logged_timesteps(run_dir: Path | str) -> int:
+    path = Path(run_dir) / "progress.csv"
+    if not path.exists() or path.stat().st_size == 0:
+        return 0
+    last = ""
+    with path.open(encoding="utf-8", newline="") as fh:
+        header = fh.readline()
+        keys = [key.strip() for key in header.strip().split(",")]
+        for line in fh:
+            if line.strip():
+                last = line
+    if not last or "time/total_timesteps" not in keys:
+        return 0
+    cols = next(csv.reader([last]))
+    idx = keys.index("time/total_timesteps")
+    return int(float(cols[idx]))
+
+
+def configure_run_logger(
+    run_dir: Path | str, tensorboard: bool = False, resume: bool = False
+) -> Logger:
     run_dir = Path(run_dir)
     run_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = run_dir / "progress.csv"
+    log_path = run_dir / "train.log"
+    if resume and csv_path.exists() and csv_path.stat().st_size > 0:
+        csv_writer = _ResumingCSVOutputFormat(str(csv_path))
+        log_file = open(log_path, "a", encoding="utf-8")
+        log_writer = HumanOutputFormat(log_file)
+    else:
+        csv_writer = CSVOutputFormat(str(csv_path))
+        log_writer = HumanOutputFormat(str(log_path))
     outputs = [
         HumanOutputFormat(sys.stdout),
-        HumanOutputFormat(str(run_dir / "train.log")),
-        CSVOutputFormat(str(run_dir / "progress.csv")),
+        log_writer,
+        csv_writer,
     ]
     if tensorboard:
         tb = run_dir / "tb"

@@ -9,7 +9,8 @@ import numpy as np
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from sim.constants import MU_EARTH, OMEGA_EARTH, R_EARTH
@@ -17,13 +18,21 @@ from sim.coverage import eci_to_ecef
 from sim.kepler import KeplerWorld
 from sim.ops.resource_env import validate
 
+from web.api.dispatch import begin, iter_ndjson, packed_result, resume as resume_run
+
 ALTITUDE_M = 500e3
 INCLINATION = math.radians(51.6)
 ORBIT_SAMPLES = 64
 STEP_S = 300
 
-app = FastAPI()
+app = FastAPI(
+    title="HARMONY operator API",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 _shift: dict | None = None
+_OPENAPI = Path(__file__).resolve().parents[1] / "openapi.yaml"
 
 
 def plane_count(n_sats: int) -> int:
@@ -182,6 +191,90 @@ def tracks():
     )
 
 
+def _goal(raw: str | None) -> str:
+    if raw in ("revenue", "money"):
+        return "revenue"
+    return "priority"
+
+
+@app.get("/api/dispatch")
+def dispatch(goal: str = "priority"):
+    """Stream the shift the loaded policy just flew. Same JSON reuses the cache."""
+    if _shift is None:
+        raise HTTPException(status_code=409, detail="Сценарий ещё не загружен")
+    run = begin(_shift["scenario"], _goal(goal))
+    return StreamingResponse(
+        iter_ndjson(run),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/dispatch/resume")
+def dispatch_resume(body: dict):
+    """Переиграть хвост с шага k: прошлые команды как были, сеть только с k."""
+    if _shift is None:
+        raise HTTPException(status_code=409, detail="Сценарий ещё не загружен")
+    steps = int(_shift["scenario"]["time"]["steps"])
+    try:
+        step = int(body.get("step", -1))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Шаг вне смены") from exc
+    if step < 0 or step > steps:
+        raise HTTPException(status_code=400, detail="Шаг вне смены")
+    events = body.get("events") or []
+    if not isinstance(events, list):
+        raise HTTPException(status_code=400, detail="events должен быть списком")
+    try:
+        run, start = resume_run(
+            _shift["scenario"], step, events, _goal(body.get("goal"))
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    try:
+        resume_run(_shift["scenario"], step, events, "revenue", alt=True)
+    except RuntimeError:
+        pass
+    return StreamingResponse(
+        iter_ndjson(run, from_index=start),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/api/dispatch/alt")
+def dispatch_alt():
+    """Поток второй политики (HARMONY_ALT_MODEL). Только метрики кадра."""
+    if _shift is None:
+        raise HTTPException(status_code=409, detail="Сценарий ещё не загружен")
+    run = begin(_shift["scenario"], "revenue", alt=True)
+    return StreamingResponse(
+        iter_ndjson(run),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.get("/api/result")
+def result():
+    if _shift is None:
+        raise HTTPException(status_code=409, detail="Сценарий ещё не загружен")
+    run = begin(_shift["scenario"])
+    payload, status = packed_result(run)
+    if status == "not_ready":
+        raise HTTPException(status_code=409, detail="Прогон ещё не готов")
+    if status == "too_large":
+        raise HTTPException(status_code=413, detail="Результат больше 120 Мб")
+    if status != "ok" or payload is None:
+        raise HTTPException(status_code=500, detail=run.error or "Нет результата прогона")
+    name = f"{_shift['scenario']['meta']['id']}.result.json"
+    return Response(
+        content=payload,
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
+    )
+
+
 def _frame(step: int, row: np.ndarray, sun: np.ndarray) -> dict:
     return {
         "type": "frame",
@@ -192,6 +285,34 @@ def _frame(step: int, row: np.ndarray, sun: np.ndarray) -> dict:
 
 
 _WEB = Path(__file__).resolve().parents[1]
+
+
+@app.get("/api/docs", include_in_schema=False)
+def swagger_ui():
+    return get_swagger_ui_html(
+        openapi_url="/api/openapi.json",
+        title="HARMONY operator API",
+    )
+
+
+@app.get("/api/redoc", include_in_schema=False)
+def redoc_ui():
+    return get_redoc_html(
+        openapi_url="/api/openapi.json",
+        title="HARMONY operator API",
+    )
+
+
+@app.get("/api/openapi.json", include_in_schema=False)
+def openapi_json():
+    import yaml
+
+    return JSONResponse(yaml.safe_load(_OPENAPI.read_text(encoding="utf-8")))
+
+
+@app.get("/api/openapi.yaml", include_in_schema=False)
+def openapi_yaml():
+    return FileResponse(_OPENAPI, media_type="application/yaml")
 
 
 @app.get("/")

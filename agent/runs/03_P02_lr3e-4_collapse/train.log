@@ -1,0 +1,1164 @@
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.101    |
+|    conflicts_repaired     | 456      |
+|    downlink_slots_used    | 96.8     |
+|    executor_switches      | 244      |
+|    idle_share             | 0.776    |
+|    job_share              | 0.123    |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 10.2     |
+|    outage                 | 12.2     |
+|    skipped                | 32.8     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.717    |
+|    critical_done_on_time  | 183      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.547    |
+|    episodes               | 4        |
+|    jobs_completed         | 866      |
+|    jobs_due_missed        | 342      |
+|    min_soc_pct            | 46.7     |
+|    revenue_usd            | 2.16e+04 |
+|    work_lost_steps        | 115      |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 2.5e+03  |
+| time/                     |          |
+|    fps                    | 53       |
+|    iterations             | 1        |
+|    time_elapsed           | 21       |
+|    total_timesteps        | 1152     |
+----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.154     |
+|    conflicts_repaired     | 556       |
+|    downlink_slots_used    | 116       |
+|    executor_switches      | 275       |
+|    idle_share             | 0.719     |
+|    job_share              | 0.126     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 9.75      |
+|    outage                 | 17        |
+|    skipped                | 37.5      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.746     |
+|    critical_done_on_time  | 197       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.59      |
+|    episodes               | 8         |
+|    jobs_completed         | 902       |
+|    jobs_due_missed        | 306       |
+|    min_soc_pct            | 45.9      |
+|    revenue_usd            | 2.24e+04  |
+|    work_lost_steps        | 91.2      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.66e+03  |
+| time/                     |           |
+|    fps                    | 15        |
+|    iterations             | 2         |
+|    time_elapsed           | 149       |
+|    total_timesteps        | 2304      |
+| train/                    |           |
+|    approx_kl              | 0.4357743 |
+|    clip_fraction          | 0.762     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -31.3     |
+|    explained_variance     | 0.000278  |
+|    learning_rate          | 0.0003    |
+|    loss                   | 2.16e+03  |
+|    n_updates              | 4         |
+|    policy_gradient_loss   | 0.131     |
+|    value_loss             | 1.64e+04  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.8       |
+|    conflicts_repaired     | 515       |
+|    downlink_slots_used    | 100       |
+|    executor_switches      | 242       |
+|    idle_share             | 0.075     |
+|    job_share              | 0.125     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 8.75      |
+|    outage                 | 16        |
+|    skipped                | 36.2      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.728     |
+|    critical_done_on_time  | 186       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.558     |
+|    episodes               | 12        |
+|    jobs_completed         | 880       |
+|    jobs_due_missed        | 328       |
+|    min_soc_pct            | 40        |
+|    revenue_usd            | 2.19e+04  |
+|    work_lost_steps        | 106       |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.64e+03  |
+| time/                     |           |
+|    fps                    | 12        |
+|    iterations             | 3         |
+|    time_elapsed           | 278       |
+|    total_timesteps        | 3456      |
+| train/                    |           |
+|    approx_kl              | 15.441532 |
+|    clip_fraction          | 0.913     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -36.9     |
+|    explained_variance     | 0.0155    |
+|    learning_rate          | 0.0003    |
+|    loss                   | 1.16e+03  |
+|    n_updates              | 8         |
+|    policy_gradient_loss   | 0.248     |
+|    value_loss             | 8.75e+03  |
+-----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.984    |
+|    conflicts_repaired     | 0.5      |
+|    downlink_slots_used    | 1.25     |
+|    executor_switches      | 0.25     |
+|    idle_share             | 0.00957  |
+|    job_share              | 0.00691  |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 9        |
+|    outage                 | 13.2     |
+|    skipped                | 35.5     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.0257   |
+|    critical_done_on_time  | 6        |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.018    |
+|    episodes               | 16       |
+|    jobs_completed         | 31       |
+|    jobs_due_missed        | 1.18e+03 |
+|    min_soc_pct            | 39.8     |
+|    revenue_usd            | 433      |
+|    work_lost_steps        | 62.2     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 1.12e+03 |
+| time/                     |          |
+|    fps                    | 11       |
+|    iterations             | 4        |
+|    time_elapsed           | 407      |
+|    total_timesteps        | 4608     |
+| train/                    |          |
+|    approx_kl              | 40.26013 |
+|    clip_fraction          | 0.967    |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -3.19    |
+|    explained_variance     | 0.058    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 2.07e+03 |
+|    n_updates              | 12       |
+|    policy_gradient_loss   | 0.243    |
+|    value_loss             | 9.21e+03 |
+----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.625    |
+|    conflicts_repaired     | 992      |
+|    downlink_slots_used    | 168      |
+|    executor_switches      | 284      |
+|    idle_share             | 0.241    |
+|    job_share              | 0.134    |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 10       |
+|    outage                 | 16.5     |
+|    skipped                | 34.2     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.814    |
+|    critical_done_on_time  | 224      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.671    |
+|    episodes               | 20       |
+|    jobs_completed         | 983      |
+|    jobs_due_missed        | 225      |
+|    min_soc_pct            | 39.9     |
+|    revenue_usd            | 2.45e+04 |
+|    work_lost_steps        | 52.5     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 1.61e+03 |
+| time/                     |          |
+|    fps                    | 10       |
+|    iterations             | 5        |
+|    time_elapsed           | 529      |
+|    total_timesteps        | 5760     |
+| train/                    |          |
+|    approx_kl              | 64.59419 |
+|    clip_fraction          | 0.85     |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -31.8    |
+|    explained_variance     | 0.365    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 896      |
+|    n_updates              | 16       |
+|    policy_gradient_loss   | 0.235    |
+|    value_loss             | 1.94e+04 |
+----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.0798   |
+|    conflicts_repaired     | 843      |
+|    downlink_slots_used    | 154      |
+|    executor_switches      | 291      |
+|    idle_share             | 0.788    |
+|    job_share              | 0.132    |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 8.25     |
+|    outage                 | 13.8     |
+|    skipped                | 34.5     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.799    |
+|    critical_done_on_time  | 218      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.653    |
+|    episodes               | 24       |
+|    jobs_completed         | 965      |
+|    jobs_due_missed        | 243      |
+|    min_soc_pct            | 45       |
+|    revenue_usd            | 2.4e+04  |
+|    work_lost_steps        | 56.2     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 1.91e+03 |
+| time/                     |          |
+|    fps                    | 10       |
+|    iterations             | 6        |
+|    time_elapsed           | 657      |
+|    total_timesteps        | 6912     |
+| train/                    |          |
+|    approx_kl              | 7.246717 |
+|    clip_fraction          | 0.836    |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -31.6    |
+|    explained_variance     | 0.513    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 627      |
+|    n_updates              | 20       |
+|    policy_gradient_loss   | 0.301    |
+|    value_loss             | 1.09e+04 |
+----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.0131    |
+|    conflicts_repaired     | 250       |
+|    downlink_slots_used    | 58.5      |
+|    executor_switches      | 73        |
+|    idle_share             | 0.919     |
+|    job_share              | 0.0675    |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 7.75      |
+|    outage                 | 12.8      |
+|    skipped                | 38.5      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.382     |
+|    critical_done_on_time  | 95.5      |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.286     |
+|    episodes               | 28        |
+|    jobs_completed         | 461       |
+|    jobs_due_missed        | 747       |
+|    min_soc_pct            | 48.3      |
+|    revenue_usd            | 1.11e+04  |
+|    work_lost_steps        | 125       |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 1.58e+03  |
+| time/                     |           |
+|    fps                    | 10        |
+|    iterations             | 7         |
+|    time_elapsed           | 778       |
+|    total_timesteps        | 8064      |
+| train/                    |           |
+|    approx_kl              | 15.148058 |
+|    clip_fraction          | 0.957     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -10.5     |
+|    explained_variance     | 0.774     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 653       |
+|    n_updates              | 24        |
+|    policy_gradient_loss   | 0.462     |
+|    value_loss             | 5.99e+03  |
+-----------------------------------------
+------------------------------------------
+| act/                      |            |
+|    calibrate_share        | 0.0141     |
+|    conflicts_repaired     | 270        |
+|    downlink_slots_used    | 62.8       |
+|    executor_switches      | 89.2       |
+|    idle_share             | 0.892      |
+|    job_share              | 0.0941     |
+| events/                   |            |
+|    add_jobs               | 0          |
+|    close_downlink         | 6.75       |
+|    outage                 | 14.8       |
+|    skipped                | 31         |
+| ops/                      |            |
+|    below_reserve_steps    | 0          |
+|    blocked_commands       | 0          |
+|    brownout_steps         | 0          |
+|    completed_share        | 0.533      |
+|    critical_done_on_time  | 134        |
+|    critical_due           | 334        |
+|    critical_on_time_share | 0.402      |
+|    episodes               | 32         |
+|    jobs_completed         | 644        |
+|    jobs_due_missed        | 564        |
+|    min_soc_pct            | 46.8       |
+|    revenue_usd            | 1.57e+04   |
+|    work_lost_steps        | 135        |
+| rollout/                  |            |
+|    ep_len_mean            | 288        |
+|    ep_rew_mean            | 1.5e+03    |
+| time/                     |            |
+|    fps                    | 10         |
+|    iterations             | 8          |
+|    time_elapsed           | 897        |
+|    total_timesteps        | 9216       |
+| train/                    |            |
+|    approx_kl              | 0.32195696 |
+|    clip_fraction          | 0.645      |
+|    clip_range             | 0.2        |
+|    entropy_loss           | -10.2      |
+|    explained_variance     | -0.206     |
+|    learning_rate          | 0.0003     |
+|    loss                   | 1.2e+03    |
+|    n_updates              | 28         |
+|    policy_gradient_loss   | 0.151      |
+|    value_loss             | 8.62e+03   |
+------------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.016     |
+|    conflicts_repaired     | 384       |
+|    downlink_slots_used    | 92        |
+|    executor_switches      | 99.5      |
+|    idle_share             | 0.882     |
+|    job_share              | 0.102     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 7.5       |
+|    outage                 | 15.5      |
+|    skipped                | 29        |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.595     |
+|    critical_done_on_time  | 155       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.464     |
+|    episodes               | 36        |
+|    jobs_completed         | 718       |
+|    jobs_due_missed        | 490       |
+|    min_soc_pct            | 48.6      |
+|    revenue_usd            | 1.8e+04   |
+|    work_lost_steps        | 86.2      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 1.5e+03   |
+| time/                     |           |
+|    fps                    | 10        |
+|    iterations             | 9         |
+|    time_elapsed           | 1023      |
+|    total_timesteps        | 10368     |
+| train/                    |           |
+|    approx_kl              | 0.7537606 |
+|    clip_fraction          | 0.672     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -11.1     |
+|    explained_variance     | 0.725     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 682       |
+|    n_updates              | 32        |
+|    policy_gradient_loss   | 0.153     |
+|    value_loss             | 2.23e+03  |
+-----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.346    |
+|    conflicts_repaired     | 2.46e+03 |
+|    downlink_slots_used    | 297      |
+|    executor_switches      | 111      |
+|    idle_share             | 0.51     |
+|    job_share              | 0.144    |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 10.8     |
+|    outage                 | 15.8     |
+|    skipped                | 38.5     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.908    |
+|    critical_done_on_time  | 284      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.851    |
+|    episodes               | 40       |
+|    jobs_completed         | 1.1e+03  |
+|    jobs_due_missed        | 111      |
+|    min_soc_pct            | 42       |
+|    revenue_usd            | 2.62e+04 |
+|    work_lost_steps        | 48.8     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 1.84e+03 |
+| time/                     |          |
+|    fps                    | 10       |
+|    iterations             | 10       |
+|    time_elapsed           | 1146     |
+|    total_timesteps        | 11520    |
+| train/                    |          |
+|    approx_kl              | 4.297434 |
+|    clip_fraction          | 0.53     |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -11.4    |
+|    explained_variance     | 0.858    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 622      |
+|    n_updates              | 36       |
+|    policy_gradient_loss   | 0.106    |
+|    value_loss             | 1.73e+03 |
+----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.612    |
+|    conflicts_repaired     | 2.34e+03 |
+|    downlink_slots_used    | 284      |
+|    executor_switches      | 114      |
+|    idle_share             | 0.248    |
+|    job_share              | 0.14     |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 9.5      |
+|    outage                 | 13.2     |
+|    skipped                | 34.2     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.886    |
+|    critical_done_on_time  | 272      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.813    |
+|    episodes               | 44       |
+|    jobs_completed         | 1.07e+03 |
+|    jobs_due_missed        | 138      |
+|    min_soc_pct            | 39.8     |
+|    revenue_usd            | 2.55e+04 |
+|    work_lost_steps        | 49.8     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 2.1e+03  |
+| time/                     |          |
+|    fps                    | 9        |
+|    iterations             | 11       |
+|    time_elapsed           | 1267     |
+|    total_timesteps        | 12672    |
+| train/                    |          |
+|    approx_kl              | 77.13102 |
+|    clip_fraction          | 0.963    |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -7.24    |
+|    explained_variance     | 0.68     |
+|    learning_rate          | 0.0003   |
+|    loss                   | 1.88e+03 |
+|    n_updates              | 40       |
+|    policy_gradient_loss   | 0.309    |
+|    value_loss             | 1.7e+04  |
+----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.59      |
+|    conflicts_repaired     | 2.27e+03  |
+|    downlink_slots_used    | 276       |
+|    executor_switches      | 117       |
+|    idle_share             | 0.273     |
+|    job_share              | 0.137     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 9.25      |
+|    outage                 | 15.5      |
+|    skipped                | 34.2      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.866     |
+|    critical_done_on_time  | 263       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.787     |
+|    episodes               | 48        |
+|    jobs_completed         | 1.05e+03  |
+|    jobs_due_missed        | 162       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 2.49e+04  |
+|    work_lost_steps        | 46        |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.29e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 12        |
+|    time_elapsed           | 1388      |
+|    total_timesteps        | 13824     |
+| train/                    |           |
+|    approx_kl              | 2.5365303 |
+|    clip_fraction          | 0.449     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -5.76     |
+|    explained_variance     | 0.828     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 1.29e+03  |
+|    n_updates              | 44        |
+|    policy_gradient_loss   | 0.0918    |
+|    value_loss             | 1.34e+04  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.555     |
+|    conflicts_repaired     | 2.16e+03  |
+|    downlink_slots_used    | 264       |
+|    executor_switches      | 115       |
+|    idle_share             | 0.314     |
+|    job_share              | 0.131     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 8.25      |
+|    outage                 | 13.8      |
+|    skipped                | 31        |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.834     |
+|    critical_done_on_time  | 253       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.758     |
+|    episodes               | 52        |
+|    jobs_completed         | 1.01e+03  |
+|    jobs_due_missed        | 200       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 2.4e+04   |
+|    work_lost_steps        | 43        |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.43e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 13        |
+|    time_elapsed           | 1507      |
+|    total_timesteps        | 14976     |
+| train/                    |           |
+|    approx_kl              | 2.9610918 |
+|    clip_fraction          | 0.503     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -5.97     |
+|    explained_variance     | 0.893     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 1.12e+03  |
+|    n_updates              | 48        |
+|    policy_gradient_loss   | 0.0732    |
+|    value_loss             | 9.27e+03  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.52      |
+|    conflicts_repaired     | 2.09e+03  |
+|    downlink_slots_used    | 259       |
+|    executor_switches      | 110       |
+|    idle_share             | 0.352     |
+|    job_share              | 0.128     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 9.25      |
+|    outage                 | 13.5      |
+|    skipped                | 38        |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.813     |
+|    critical_done_on_time  | 246       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.736     |
+|    episodes               | 56        |
+|    jobs_completed         | 982       |
+|    jobs_due_missed        | 226       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 2.34e+04  |
+|    work_lost_steps        | 43.8      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.54e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 14        |
+|    time_elapsed           | 1624      |
+|    total_timesteps        | 16128     |
+| train/                    |           |
+|    approx_kl              | 2.8261507 |
+|    clip_fraction          | 0.386     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -5.84     |
+|    explained_variance     | 0.943     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 1.25e+03  |
+|    n_updates              | 52        |
+|    policy_gradient_loss   | -0.0209   |
+|    value_loss             | 8.01e+03  |
+-----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.506    |
+|    conflicts_repaired     | 2.03e+03 |
+|    downlink_slots_used    | 253      |
+|    executor_switches      | 108      |
+|    idle_share             | 0.37     |
+|    job_share              | 0.124    |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 7.75     |
+|    outage                 | 12.2     |
+|    skipped                | 30       |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.787    |
+|    critical_done_on_time  | 236      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.707    |
+|    episodes               | 60       |
+|    jobs_completed         | 951      |
+|    jobs_due_missed        | 257      |
+|    min_soc_pct            | 39.8     |
+|    revenue_usd            | 2.25e+04 |
+|    work_lost_steps        | 40.2     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 2.61e+03 |
+| time/                     |          |
+|    fps                    | 9        |
+|    iterations             | 15       |
+|    time_elapsed           | 1742     |
+|    total_timesteps        | 17280    |
+| train/                    |          |
+|    approx_kl              | 1.972411 |
+|    clip_fraction          | 0.389    |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -5.79    |
+|    explained_variance     | 0.962    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 754      |
+|    n_updates              | 56       |
+|    policy_gradient_loss   | 0.0269   |
+|    value_loss             | 5.77e+03 |
+----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.487     |
+|    conflicts_repaired     | 1.9e+03   |
+|    downlink_slots_used    | 240       |
+|    executor_switches      | 102       |
+|    idle_share             | 0.395     |
+|    job_share              | 0.117     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 8         |
+|    outage                 | 12.5      |
+|    skipped                | 35.2      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.746     |
+|    critical_done_on_time  | 229       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.686     |
+|    episodes               | 64        |
+|    jobs_completed         | 902       |
+|    jobs_due_missed        | 306       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 2.13e+04  |
+|    work_lost_steps        | 40        |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.66e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 16        |
+|    time_elapsed           | 1862      |
+|    total_timesteps        | 18432     |
+| train/                    |           |
+|    approx_kl              | 1.5192845 |
+|    clip_fraction          | 0.354     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -5.62     |
+|    explained_variance     | 0.976     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 1.19e+03  |
+|    n_updates              | 60        |
+|    policy_gradient_loss   | 0.0204    |
+|    value_loss             | 6.14e+03  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.456     |
+|    conflicts_repaired     | 1.79e+03  |
+|    downlink_slots_used    | 229       |
+|    executor_switches      | 94.5      |
+|    idle_share             | 0.434     |
+|    job_share              | 0.111     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 6.5       |
+|    outage                 | 16        |
+|    skipped                | 40.2      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.706     |
+|    critical_done_on_time  | 221       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.662     |
+|    episodes               | 68        |
+|    jobs_completed         | 853       |
+|    jobs_due_missed        | 355       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 2.01e+04  |
+|    work_lost_steps        | 35.2      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.68e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 17        |
+|    time_elapsed           | 1982      |
+|    total_timesteps        | 19584     |
+| train/                    |           |
+|    approx_kl              | 3.4037275 |
+|    clip_fraction          | 0.439     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -5.19     |
+|    explained_variance     | 0.977     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 2.63e+03  |
+|    n_updates              | 64        |
+|    policy_gradient_loss   | 0.0106    |
+|    value_loss             | 6.87e+03  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.423     |
+|    conflicts_repaired     | 1.66e+03  |
+|    downlink_slots_used    | 218       |
+|    executor_switches      | 79.5      |
+|    idle_share             | 0.474     |
+|    job_share              | 0.103     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 8.25      |
+|    outage                 | 15        |
+|    skipped                | 31        |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.658     |
+|    critical_done_on_time  | 203       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.608     |
+|    episodes               | 72        |
+|    jobs_completed         | 794       |
+|    jobs_due_missed        | 414       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 1.88e+04  |
+|    work_lost_steps        | 33.2      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.67e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 18        |
+|    time_elapsed           | 2103      |
+|    total_timesteps        | 20736     |
+| train/                    |           |
+|    approx_kl              | 2.9414275 |
+|    clip_fraction          | 0.376     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -4.88     |
+|    explained_variance     | 0.98      |
+|    learning_rate          | 0.0003    |
+|    loss                   | 3.76e+03  |
+|    n_updates              | 68        |
+|    policy_gradient_loss   | 0.0122    |
+|    value_loss             | 9.75e+03  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.398     |
+|    conflicts_repaired     | 1.6e+03   |
+|    downlink_slots_used    | 211       |
+|    executor_switches      | 87.8      |
+|    idle_share             | 0.504     |
+|    job_share              | 0.0984    |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 10.2      |
+|    outage                 | 13.8      |
+|    skipped                | 36.5      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.627     |
+|    critical_done_on_time  | 193       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.579     |
+|    episodes               | 76        |
+|    jobs_completed         | 758       |
+|    jobs_due_missed        | 450       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 1.78e+04  |
+|    work_lost_steps        | 33.5      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.65e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 19        |
+|    time_elapsed           | 2227      |
+|    total_timesteps        | 21888     |
+| train/                    |           |
+|    approx_kl              | 3.2878025 |
+|    clip_fraction          | 0.327     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -4.52     |
+|    explained_variance     | 0.984     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 2.74e+03  |
+|    n_updates              | 72        |
+|    policy_gradient_loss   | -0.01     |
+|    value_loss             | 1.03e+04  |
+-----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.372    |
+|    conflicts_repaired     | 1.49e+03 |
+|    downlink_slots_used    | 189      |
+|    executor_switches      | 74       |
+|    idle_share             | 0.537    |
+|    job_share              | 0.0913   |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 6.5      |
+|    outage                 | 13       |
+|    skipped                | 32.2     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.576    |
+|    critical_done_on_time  | 181      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.541    |
+|    episodes               | 80       |
+|    jobs_completed         | 696      |
+|    jobs_due_missed        | 512      |
+|    min_soc_pct            | 39.8     |
+|    revenue_usd            | 1.66e+04 |
+|    work_lost_steps        | 35       |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 2.61e+03 |
+| time/                     |          |
+|    fps                    | 9        |
+|    iterations             | 20       |
+|    time_elapsed           | 2349     |
+|    total_timesteps        | 23040    |
+| train/                    |          |
+|    approx_kl              | 3.127834 |
+|    clip_fraction          | 0.248    |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -4.11    |
+|    explained_variance     | 0.984    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 5.51e+03 |
+|    n_updates              | 76       |
+|    policy_gradient_loss   | -0.0128  |
+|    value_loss             | 1.26e+04 |
+----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.359     |
+|    conflicts_repaired     | 1.42e+03  |
+|    downlink_slots_used    | 176       |
+|    executor_switches      | 70.5      |
+|    idle_share             | 0.556     |
+|    job_share              | 0.0858    |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 9.5       |
+|    outage                 | 9.75      |
+|    skipped                | 35.5      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.546     |
+|    critical_done_on_time  | 168       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.504     |
+|    episodes               | 84        |
+|    jobs_completed         | 660       |
+|    jobs_due_missed        | 548       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 1.56e+04  |
+|    work_lost_steps        | 28.2      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.55e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 21        |
+|    time_elapsed           | 2469      |
+|    total_timesteps        | 24192     |
+| train/                    |           |
+|    approx_kl              | 4.3728886 |
+|    clip_fraction          | 0.235     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -3.85     |
+|    explained_variance     | 0.981     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 6.33e+03  |
+|    n_updates              | 80        |
+|    policy_gradient_loss   | -0.0296   |
+|    value_loss             | 1.46e+04  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.335     |
+|    conflicts_repaired     | 1.3e+03   |
+|    downlink_slots_used    | 170       |
+|    executor_switches      | 71.5      |
+|    idle_share             | 0.584     |
+|    job_share              | 0.081     |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 10.8      |
+|    outage                 | 14.8      |
+|    skipped                | 29.8      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.515     |
+|    critical_done_on_time  | 158       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.475     |
+|    episodes               | 88        |
+|    jobs_completed         | 622       |
+|    jobs_due_missed        | 586       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 1.47e+04  |
+|    work_lost_steps        | 30.2      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.49e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 22        |
+|    time_elapsed           | 2588      |
+|    total_timesteps        | 25344     |
+| train/                    |           |
+|    approx_kl              | 6.5948405 |
+|    clip_fraction          | 0.211     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -3.72     |
+|    explained_variance     | 0.978     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 6.14e+03  |
+|    n_updates              | 84        |
+|    policy_gradient_loss   | -0.0399   |
+|    value_loss             | 1.68e+04  |
+-----------------------------------------
+-----------------------------------------
+| act/                      |           |
+|    calibrate_share        | 0.295     |
+|    conflicts_repaired     | 1.12e+03  |
+|    downlink_slots_used    | 157       |
+|    executor_switches      | 61        |
+|    idle_share             | 0.634     |
+|    job_share              | 0.0709    |
+| events/                   |           |
+|    add_jobs               | 0         |
+|    close_downlink         | 8.5       |
+|    outage                 | 14.2      |
+|    skipped                | 32.2      |
+| ops/                      |           |
+|    below_reserve_steps    | 0         |
+|    blocked_commands       | 0         |
+|    brownout_steps         | 0         |
+|    completed_share        | 0.457     |
+|    critical_done_on_time  | 144       |
+|    critical_due           | 334       |
+|    critical_on_time_share | 0.43      |
+|    episodes               | 92        |
+|    jobs_completed         | 552       |
+|    jobs_due_missed        | 656       |
+|    min_soc_pct            | 39.8      |
+|    revenue_usd            | 1.29e+04  |
+|    work_lost_steps        | 26.5      |
+| rollout/                  |           |
+|    ep_len_mean            | 288       |
+|    ep_rew_mean            | 2.41e+03  |
+| time/                     |           |
+|    fps                    | 9         |
+|    iterations             | 23        |
+|    time_elapsed           | 2708      |
+|    total_timesteps        | 26496     |
+| train/                    |           |
+|    approx_kl              | 6.0153847 |
+|    clip_fraction          | 0.247     |
+|    clip_range             | 0.2       |
+|    entropy_loss           | -3.6      |
+|    explained_variance     | 0.975     |
+|    learning_rate          | 0.0003    |
+|    loss                   | 5.85e+03  |
+|    n_updates              | 88        |
+|    policy_gradient_loss   | -0.0321   |
+|    value_loss             | 2.47e+04  |
+-----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.258    |
+|    conflicts_repaired     | 954      |
+|    downlink_slots_used    | 128      |
+|    executor_switches      | 51.5     |
+|    idle_share             | 0.681    |
+|    job_share              | 0.0603   |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 6.25     |
+|    outage                 | 13.5     |
+|    skipped                | 30.5     |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.385    |
+|    critical_done_on_time  | 118      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.353    |
+|    episodes               | 96       |
+|    jobs_completed         | 466      |
+|    jobs_due_missed        | 742      |
+|    min_soc_pct            | 39.9     |
+|    revenue_usd            | 1.1e+04  |
+|    work_lost_steps        | 24       |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 2.31e+03 |
+| time/                     |          |
+|    fps                    | 9        |
+|    iterations             | 24       |
+|    time_elapsed           | 2828     |
+|    total_timesteps        | 27648    |
+| train/                    |          |
+|    approx_kl              | 6.201183 |
+|    clip_fraction          | 0.24     |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -3.03    |
+|    explained_variance     | 0.971    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 6.27e+03 |
+|    n_updates              | 92       |
+|    policy_gradient_loss   | -0.04    |
+|    value_loss             | 2.54e+04 |
+----------------------------------------
+----------------------------------------
+| act/                      |          |
+|    calibrate_share        | 0.214    |
+|    conflicts_repaired     | 768      |
+|    downlink_slots_used    | 111      |
+|    executor_switches      | 42.5     |
+|    idle_share             | 0.734    |
+|    job_share              | 0.0516   |
+| events/                   |          |
+|    add_jobs               | 0        |
+|    close_downlink         | 7.25     |
+|    outage                 | 16.8     |
+|    skipped                | 34       |
+| ops/                      |          |
+|    below_reserve_steps    | 0        |
+|    blocked_commands       | 0        |
+|    brownout_steps         | 0        |
+|    completed_share        | 0.332    |
+|    critical_done_on_time  | 103      |
+|    critical_due           | 334      |
+|    critical_on_time_share | 0.308    |
+|    episodes               | 100      |
+|    jobs_completed         | 401      |
+|    jobs_due_missed        | 807      |
+|    min_soc_pct            | 39.8     |
+|    revenue_usd            | 9.43e+03 |
+|    work_lost_steps        | 19.8     |
+| rollout/                  |          |
+|    ep_len_mean            | 288      |
+|    ep_rew_mean            | 2.19e+03 |
+| time/                     |          |
+|    fps                    | 9        |
+|    iterations             | 25       |
+|    time_elapsed           | 2984     |
+|    total_timesteps        | 28800    |
+| train/                    |          |
+|    approx_kl              | 8.709759 |
+|    clip_fraction          | 0.27     |
+|    clip_range             | 0.2      |
+|    entropy_loss           | -2.75    |
+|    explained_variance     | 0.953    |
+|    learning_rate          | 0.0003   |
+|    loss                   | 2.86e+03 |
+|    n_updates              | 96       |
+|    policy_gradient_loss   | 0.0146   |
+|    value_loss             | 2.44e+04 |
+----------------------------------------

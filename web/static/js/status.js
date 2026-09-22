@@ -1,13 +1,26 @@
-export function satelliteStatus(sat, model) {
-  if (!sat.available) return 'unavailable';
-  const soc = (100 * sat.energy_wh) / sat.capacity_wh;
+export const TEMP_LIMIT_C = 130;
+
+export function socPct(sat) {
+  return (100 * sat.energy_wh) / sat.capacity_wh;
+}
+
+export function isOverheated(sat) {
+  return Boolean(sat) && Math.abs(sat.temp_c) >= TEMP_LIMIT_C;
+}
+
+export function socTone(sat, model) {
+  if (!sat || !sat.available) return 'unavailable';
+  const soc = socPct(sat);
   if (soc < model.critical_soc_pct) return 'critical';
   if (soc < model.reserve_soc_pct) return 'reserve';
   return 'ok';
 }
 
-export function socPct(sat) {
-  return (100 * sat.energy_wh) / sat.capacity_wh;
+export function satelliteStatus(sat, model) {
+  if (!sat || !sat.available) return 'unavailable';
+  if (isOverheated(sat) || socTone(sat, model) === 'critical') return 'critical';
+  if (socTone(sat, model) === 'reserve') return 'reserve';
+  return 'ok';
 }
 
 export function formatClock(step) {
@@ -88,6 +101,40 @@ export function tapeActionLabel(entry) {
 export function reasonLabel(reason) {
   if (!reason) return '';
   return REASON_LABELS[reason] || reason;
+}
+
+export function satFaded(sat) {
+  if (!sat) return false;
+  if (sat.action === 'job' || sat.action === 'calibrate') return false;
+  return sat.assignable === false;
+}
+
+export function jobNeverOpen(job) {
+  return job && job.first_open_step == null;
+}
+
+export function jobFaded(job) {
+  if (!job) return false;
+  if (job.status === 'active' || job.status === 'done') return false;
+  if (job.status === 'overdue') return jobNeverOpen(job);
+  return job.assignable === false;
+}
+
+export function jobListRank(job) {
+  const never = jobNeverOpen(job);
+  if (job.status === 'active') return 0;
+  if (job.status === 'waiting' && job.assignable) return 1;
+  if (job.status === 'done') return 2;
+  if (job.status === 'overdue' && !never) return 3;
+  if (job.status === 'overdue' && never) return 4;
+  if (job.status === 'infeasible') return 5;
+  return 6;
+}
+
+export function accessLabel(job) {
+  if (!job) return '';
+  if (job.first_open_step == null) return 'Не была в доступе';
+  return `Была в доступе на шаге ${job.first_open_step}`;
 }
 
 export function idleReasonLabel(sat) {

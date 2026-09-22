@@ -1,7 +1,8 @@
-import { formatClock } from '../status.js';
-import { operatorEvents } from '../state.js';
-import { buildSignalSvg, timelineMarks } from '../timelineSignal.js?v=tl-fit';
-import { syncGlobe } from '../globe.js';
+import { formatClock } from '../status.js?v=palette1';
+import { buildSignalSvg, curveAdvantagePct } from '../timelineSignal.js?v=tl-adv';
+import { detectMarks } from '../timelineMarks.js';
+import { dispatchSnapshot } from '../api.js?v=delta1';
+import { syncGlobe } from '../globe.js?v=job-green';
 
 export function renderCenterStage(state, actions, d3El, tlEl) {
   syncGlobe(d3El, state, actions);
@@ -14,17 +15,26 @@ function renderTimeline(el, state, actions) {
   const view = state.previewStep ?? state.step;
   const nowT = now / steps;
   const ballT = view / steps;
-  const events = operatorEvents(state);
-  const marks = timelineMarks(steps);
+  const snap = dispatchSnapshot();
+  const qs = [];
+  if (snap) {
+    for (let i = 0; i <= steps; i += 1) {
+      const frame = snap.frames.get(i);
+      qs[i] = frame && typeof frame.q === 'number' ? frame.q : null;
+    }
+  }
+  const marks = detectMarks(snap, state);
+  const advantage = curveAdvantagePct(qs, now, steps);
+  const advantageText = advantage == null ? '—' : `${advantage}%`;
   el.innerHTML = `
     <div class="timeline-head">
-      <span>Ожидается <span class="num">${steps}</span> шагов · Меток событий <span class="num">${marks.length}</span></span>
+      <span>Ожидается <span class="num">${steps}</span> шагов · Меток событий <span class="num">${marks.length}</span> · Преимущество текущей политики: <span class="num">${advantageText}</span></span>
       <span class="num">${formatClock(view)}</span>
     </div>
     <div class="timeline-track" data-track>
-      ${buildSignalSvg(nowT, ballT, events, steps)}
+      ${buildSignalSvg(nowT, ballT, qs, marks, steps)}
       ${marks.map((m) => `
-        <button type="button" class="tl-dot tone-${m.tone}" data-step="${m.step}" style="left:${m.left * 100}%" title="${m.title}"></button>
+        <button type="button" class="tl-dot tone-${m.tone}" data-mark="${m.id}" data-step="${m.step}" style="left:${m.left * 100}%" title="${m.title}"></button>
       `).join('')}
       <div class="tl-stick" style="left:${nowT * 100}%"></div>
       <div class="tl-ball" style="left:${ballT * 100}%"></div>
@@ -42,7 +52,8 @@ function renderTimeline(el, state, actions) {
   track.querySelectorAll('.tl-dot').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
-      actions.previewStep(Number(btn.dataset.step));
+      const mark = marks.find((row) => row.id === btn.dataset.mark);
+      actions.previewStep(Number(btn.dataset.step), mark);
     });
   });
 }

@@ -39,7 +39,8 @@ def _bar_chart(report: dict, out_dir: Path, tag: str) -> Path:
         ax.grid(axis="y", alpha=0.3)
         for i, v in enumerate(values):
             ax.text(i, v, f"{v:.0f}", ha="center", va="bottom", fontsize=9)
-    fig.suptitle(f"Бейзлайн против RL — {tag}")
+    mode = "argmax" if report.get("deterministic") else "сэмпл"
+    fig.suptitle(f"Бейзлайн против RL ({mode}) — {tag}")
     fig.tight_layout()
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"baseline_{tag}.png"
@@ -56,6 +57,7 @@ def compare(
     model_path: str | Path | None = None,
     seed: int = 0,
     top_k: int = 32,
+    deterministic: bool = False,
 ) -> dict:
     common = dict(scenario=scenario, goal=goal, episodes=episodes, events=events, seed=seed, top_k=top_k)
     report: dict = {
@@ -63,12 +65,13 @@ def compare(
         "scenario": scenario,
         "goal": goal,
         "events": events,
+        "deterministic": deterministic,
         "greedy": evaluate(policy="greedy", **common),
         "random": evaluate(policy="random", **common),
     }
     model = Path(model_path) if model_path else MODELS_DIR / f"ops_{goal}.zip"
     if model.exists():
-        report["ppo"] = evaluate(policy="ppo", model_path=model, **common)
+        report["ppo"] = evaluate(policy="ppo", model_path=model, deterministic=deterministic, **common)
         report["model"] = str(model)
     for key in ("greedy", "random", "ppo"):
         if key in report:
@@ -85,6 +88,12 @@ def main() -> None:
     parser.add_argument("--model", default=None)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--top-k", type=int, default=32)
+    parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="argmax PPO; по умолчанию сэмпл, как при обучении",
+    )
+    parser.add_argument("--out", default=None, help="каталог для comparison.json и графика")
     args = parser.parse_args()
 
     report = compare(
@@ -95,11 +104,13 @@ def main() -> None:
         model_path=args.model,
         seed=args.seed,
         top_k=args.top_k,
+        deterministic=args.deterministic,
     )
-    FIGURES_DIR.mkdir(parents=True, exist_ok=True)
+    out_dir = Path(args.out) if args.out else FIGURES_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
     tag = f"{report['greedy']['scenario']}_{args.goal}"
-    chart = _bar_chart(report, FIGURES_DIR, tag)
-    out = FIGURES_DIR / "comparison.json"
+    chart = _bar_chart(report, out_dir, tag)
+    out = out_dir / "comparison.json"
     out.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
     print(json.dumps(report, indent=2, ensure_ascii=False))
     print(f"\nСохранено: {out}\n            {chart}")

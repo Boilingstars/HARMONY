@@ -6,7 +6,7 @@ import {
   validateScenario,
 } from './splashValidate.js';
 
-const DEMO_URL = new URL('../../../src/mocks/demo-scenario.json', import.meta.url).href;
+const DEMO_URL = new URL('../../../src/mocks/P01_intro.json', import.meta.url).href;
 
 export function mountSplash(root, { onStartShift }) {
   if (!root) return;
@@ -62,7 +62,7 @@ export function mountSplash(root, { onStartShift }) {
   async function loadDemo() {
     set({
       phase: 'validating',
-      fileName: 'demo-scenario.json',
+      fileName: 'P01_intro.json',
       fileSize: 0,
       preview: null,
       scenario: null,

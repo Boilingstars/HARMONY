@@ -1,11 +1,11 @@
 import * as THREE from '../vendor/three.module.js';
-import { fetchOrbits, onTrack, primeTracks, trackSnapshot } from './api.js';
+import { fetchOrbits, onTrack, primeTracks, trackSnapshot } from './api.js?v=delta1';
 
 const EARTH_M = 6371000;
 const COLORS = {
   job: new THREE.Color(0x3ddc6a),
-  idle: new THREE.Color(0xf0a040),
-  calibrate: new THREE.Color(0x6ec8ff),
+  idle: new THREE.Color(0xe8ebef),
+  calibrate: new THREE.Color(0x8b7fd4),
 };
 
 let view = null;
@@ -193,7 +193,7 @@ function resize(next) {
 function paintHud(next, state, step, error) {
   const selected = state.selection.kind === 'satellite' ? state.selection.id : '—';
   const note = error ? ` · ${error}` : '';
-  next.hud.innerHTML = `<strong>глобус</strong> · шаг <span class="num">${step}</span> · выбран <span class="sel">${selected}</span>${note}<br>зелёный — задание, оранжевый — ожидание, голубой — калибровка`;
+  next.hud.innerHTML = `<strong>Глобус</strong> · шаг <span class="num">${step}</span> · выбран <span class="sel">${selected}</span>${note}<br>зелёный — задание, белый — ожидание, фиолетовый — калибровка · тусклые — сейчас нельзя взять`;
 }
 
 function bindStream(state) {
@@ -319,7 +319,12 @@ function paint(next, state, data, step) {
 
 function colorFor(sat, step, currentStep) {
   const action = actionAt(sat, step, currentStep);
-  return COLORS[action] || COLORS.idle;
+  const base = COLORS[action] || COLORS.idle;
+  const busy = action === 'job' || action === 'calibrate';
+  if (sat && sat.assignable === false && !busy) {
+    return base.clone().lerp(new THREE.Color(0x3a404c), 0.72);
+  }
+  return base;
 }
 
 function actionAt(sat, step, currentStep) {

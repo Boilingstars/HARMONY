@@ -48,6 +48,11 @@ class RewardConfig:
     brownout: float = 0.5
     blocked: float = 0.02
     executor_switch: float = 0.05
+    # Дубль задания repair гасит в idle, но log_prob дубля иначе получает ту же награду.
+    conflict: float = 0.15
+    # Калибровка бесплатна только у конца допуска — тот же порог, что у greedy (0.85).
+    early_calibrate: float = 0.15
+    calibrate_free_at: float = 0.85
 
 
 @dataclass
@@ -352,15 +357,26 @@ class OpsEnv(gym.Env):
         )
 
     def _job_rank(self, job: dict) -> tuple:
-        """Сначала исполнимые сейчас, затем ближайшие ещё не открытые."""
+        """Сначала исполнимые сейчас; среди остальных relay раньше downlink без окна."""
         assert self.session is not None
         k = self.session.env.k
-        if job["release_step"] <= k < job["deadline_step"]:
-            tier = 0 if self._has_contact(job) else 1
-            return (tier, -job["priority"], job["deadline_step"], job["remaining_steps"], job["id"])
-        if job["release_step"] > k:
-            return (2, job["release_step"], -job["priority"], job["deadline_step"], job["id"])
-        return (3, job["deadline_step"], -job["priority"], job["id"])
+        open_now = job["release_step"] <= k < job["deadline_step"]
+        if open_now and self._has_contact(job):
+            return (0, -job["priority"], job["deadline_step"], job["remaining_steps"], job["id"])
+        if job["release_step"] > k or open_now:
+            # Неисполнимые downlink не занимают слоты впереди будущих relay.
+            kind_penalty = 0 if job["kind"] == "relay" else 1
+            future = 0 if job["release_step"] > k else 1
+            return (
+                1,
+                kind_penalty,
+                future,
+                job["release_step"],
+                -job["priority"],
+                job["deadline_step"],
+                job["id"],
+            )
+        return (2, job["deadline_step"], -job["priority"], job["id"])
 
     def _job_features(self, job: dict, k: int) -> tuple[float, ...]:
         done = 1.0 - job["remaining_steps"] / job["work_steps"]
@@ -524,6 +540,7 @@ class OpsEnv(gym.Env):
             if kind == "job" and job_id is not None:
                 by_job.setdefault(job_id, []).append(i)
 
+        forced_idle: set[int] = set()
         for job_id, holders in by_job.items():
             if len(holders) == 1:
                 continue
@@ -537,6 +554,7 @@ class OpsEnv(gym.Env):
             )
             for i in holders[1:]:
                 decoded[i] = ("idle", None)
+                forced_idle.add(i)
                 conflicts += 1
             by_job[job_id] = holders[:1]
 
@@ -555,8 +573,18 @@ class OpsEnv(gym.Env):
             )
             for _, i in downlinks[self.downlink_limit :]:
                 decoded[i] = ("idle", None)
+                forced_idle.add(i)
                 conflicts += 1
             downlinks = downlinks[: self.downlink_limit]
+
+        self._yield_unique_downlinks(decoded, forced_idle)
+        self._fill_forced_idle_with_relays(decoded, forced_idle)
+
+        downlinks = [
+            (job_id, i)
+            for i, (kind, job_id) in enumerate(decoded)
+            if kind == "job" and job_id is not None and env.jobs[job_id]["kind"] == "downlink"
+        ]
 
         commands: dict[str, dict] = {}
         counts = {"idle": 0, "calibrate": 0, "job": 0}
@@ -566,14 +594,109 @@ class OpsEnv(gym.Env):
                 commands[self.sat_ids[i]] = {"action": "calibrate"}
             elif kind == "job" and job_id is not None:
                 commands[self.sat_ids[i]] = {"action": "job", "job_id": job_id}
+        # Возраст читаем до advance: калибровка на этом шаге его обнулит.
+        early = 0
+        valid = max(self.calibration_valid, 1)
+        free_at = self.reward_cfg.calibrate_free_at
+        for i, (kind, _) in enumerate(decoded):
+            if kind != "calibrate":
+                continue
+            age = env.state[self.sat_ids[i]]["calibration_age_steps"]
+            if age / valid < free_at:
+                early += 1
         stats = {
             "idle": float(counts["idle"]),
             "calibrate": float(counts["calibrate"]),
             "job": float(counts["job"]),
             "conflicts": float(conflicts),
+            "early_calibrations": float(early),
             "downlinks": float(len(downlinks)),
         }
         return commands, stats
+
+    def _slot_by_id(self) -> dict[str, int]:
+        return {c.job_id: slot for slot, c in enumerate(self._candidates)}
+
+    @staticmethod
+    def _job_pref(job: dict) -> tuple:
+        return (-job["priority"], job["deadline_step"], -job["value_usd"], job["id"])
+
+    def _yield_unique_downlinks(
+        self,
+        decoded: list[tuple[str, str | None]],
+        forced_idle: set[int],
+    ) -> None:
+        """Единственный исполнитель незанятого сброса забирает КА у relay."""
+        assert self.session is not None
+        env = self.session.env
+        slots = self._slot_by_id()
+        taken = {job_id for kind, job_id in decoded if kind == "job" and job_id is not None}
+        n_downlinks = sum(1 for job_id in taken if env.jobs[job_id]["kind"] == "downlink")
+        unique: list[tuple[dict, int, int]] = []
+        for slot, cand in enumerate(self._candidates):
+            job = cand.job
+            if job["kind"] != "downlink" or job["id"] in taken:
+                continue
+            holders = [i for i in range(self.n_sats) if self._mask[i, slot]]
+            if len(holders) != 1:
+                continue
+            unique.append((job, holders[0], slot))
+        unique.sort(key=lambda row: self._job_pref(row[0]))
+        for job, i, _slot in unique:
+            if n_downlinks >= self.downlink_limit:
+                break
+            kind, current = decoded[i]
+            if kind != "job" or current is None or env.jobs[current]["kind"] != "relay":
+                continue
+            decoded[i] = ("job", job["id"])
+            taken.add(job["id"])
+            taken.discard(current)
+            n_downlinks += 1
+            relay_slot = slots.get(current)
+            if relay_slot is None:
+                continue
+            last = self._last_executor.get(current)
+            recipients = [
+                j
+                for j, (other_kind, _) in enumerate(decoded)
+                if j != i and other_kind == "idle" and self._mask[j, relay_slot]
+            ]
+            recipients.sort(
+                key=lambda j: (
+                    0 if j in forced_idle else 1,
+                    0 if self.sat_ids[j] == last else 1,
+                    j,
+                )
+            )
+            if not recipients:
+                continue
+            other = recipients[0]
+            decoded[other] = ("job", current)
+            taken.add(current)
+            forced_idle.discard(other)
+
+    def _fill_forced_idle_with_relays(
+        self,
+        decoded: list[tuple[str, str | None]],
+        forced_idle: set[int],
+    ) -> None:
+        """Погашенный дублем или третьим сбросом КА берёт свободный контактный relay."""
+        taken = {job_id for kind, job_id in decoded if kind == "job" and job_id is not None}
+        relays = [
+            (cand.job, slot)
+            for slot, cand in enumerate(self._candidates)
+            if cand.job["kind"] == "relay" and cand.job_id not in taken
+        ]
+        relays.sort(key=lambda row: self._job_pref(row[0]))
+        for i in sorted(forced_idle):
+            if decoded[i][0] != "idle":
+                continue
+            for job, slot in relays:
+                if job["id"] in taken or not self._mask[i, slot]:
+                    continue
+                decoded[i] = ("job", job["id"])
+                taken.add(job["id"])
+                break
 
     # ------------------------------------------------------------------ награда
 
@@ -600,6 +723,8 @@ class OpsEnv(gym.Env):
             if r["reason"] not in ("accepted", "idle"):
                 reward -= cfg.blocked
         reward -= cfg.executor_switch * switches
+        reward -= cfg.conflict * stats.get("conflicts", 0.0)
+        reward -= cfg.early_calibrate * stats.get("early_calibrations", 0.0)
         self.ops_stats["executor_switches"] += switches
         self._last_executor = executed
 

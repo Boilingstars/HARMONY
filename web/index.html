@@ -4,8 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>HARMONY</title>
-  <link rel="stylesheet" href="./static/css/console.css?v=tl-fit2">
+  <link rel="stylesheet" href="./static/css/console.css?v=ui-job-green">
   <link rel="stylesheet" href="./static/css/splash.css">
+  <link rel="stylesheet" href="./static/css/transfer.css?v=resume-events">
 </head>
 <body>
   <div id="splash-root">
@@ -37,6 +38,15 @@
   <div class="modal-root" id="modal-root"></div>
   <div class="modal-root" id="event-modal-root"></div>
   <div class="compare-root" id="compare-root" hidden></div>
-  <script type="module" src="./static/js/app.js"></script>
+  <div id="transfer-overlay" hidden>
+    <div class="transfer-box" role="status" aria-live="polite" aria-label="Пересчёт политики">
+      <span class="transfer-mark">
+        <span class="transfer-ring"></span>
+        <span class="transfer-core"></span>
+      </span>
+      <span class="transfer-label">Пересчёт политики</span>
+    </div>
+  </div>
+  <script type="module" src="./static/js/app.js?v=job-green"></script>
 </body>
 </html>
