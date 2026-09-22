@@ -7,8 +7,8 @@ from pathlib import Path
 
 from sim.ops.operations import EVENT_SCHEMA
 
-DATA_DIR = Path(__file__).resolve().parents[2] / "Кейс" / "data"
-EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "Кейс" / "examples"
+DATA_DIR = Path(__file__).resolve().parents[2] / "task" / "data"
+EXAMPLES_DIR = Path(__file__).resolve().parents[2] / "task" / "examples"
 
 P01_INTRO = DATA_DIR / "P01_intro.json"
 P02_SHIFT = DATA_DIR / "P02_shift.json"

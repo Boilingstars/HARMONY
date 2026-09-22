@@ -1,0 +1,44 @@
+---
+description: Стек Django+Nginx, порядок работ, заглушка 3D, план до кода
+alwaysApply: true
+---
+
+# Реализация
+
+Пока пользователь не подтвердил план — **не писать код**. Сначала структура компонентов и план этапов. После подтверждения — только согласованный срез.
+
+## Стек
+
+- Backend: **Django**. Обёртка над `Environment` / `Session` (observe, step, event, fork/compare, export).
+- Nginx отдаёт статику: HTML / CSS / JS. Без SPA-фреймворка, пока не согласовано иное.
+- **vizart** в реальном времени — позже, не закладывать зависимость сейчас.
+- **3D-модель позже**: в зоне 3.1 плейсхолдер с тем же API выбора (`selectSatellite(id)`), без фиктивной орбитальной физики.
+
+## Предлагаемая структура (менять только с обоснованием)
+
+```text
+console/                 Django: urls, views, session store
+static/css/console.css
+static/js/
+  api.js                 fetch к Django
+  state.js               шаг, цель, selection, фильтры
+  xray.js                цепочка причин по jobs + trace
+  layout/TopBar.js
+  layout/SatelliteTree.js
+  layout/CenterStage.js  3D-placeholder + Timeline
+  layout/Inspector.js    вкладки Спутник / Задание / Событие
+  layout/MetricsBar.js
+  views/LoadModal.js
+  views/EventModal.js
+  views/CompareView.js   полноэкран, вне сетки
+```
+
+## Этапы
+
+1. Сетка 5 зон + топбар + модалка загрузки JSON.
+2. Дерево КА, фильтры, инспектор спутника, метрики из `summary()`.
+3. Таймлайн, вкладки Задание/Событие, X-Ray, ввод события.
+4. Пуск/пауза/шаг, смена цели, выгрузка результата.
+5. Полноэкранное сравнение (fork двух прогонов).
+6. Позже: вставка 3D и vizart, не ломая `selectSatellite`.
+```

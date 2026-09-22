@@ -1,0 +1,9 @@
+.git
+**/__pycache__
+**/.pytest_cache
+**/*.pyc
+agent/runs
+agent/models
+agent/figures
+**/*.mp4
+**/*.zip

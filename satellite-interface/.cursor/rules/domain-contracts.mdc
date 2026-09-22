@@ -1,0 +1,36 @@
+---
+description: Контракты данных смены (сценарий, КА, задания, события, статусы, Session API)
+alwaysApply: true
+---
+
+# Доменные контракты
+
+Источник истины: `resource_env.py` + `operations.py`. Не выдумывать поля. Схемы: сценарий `cosmo-B-ops-1.0`, события `cosmo-B-events-1.0`, результат `cosmo-B-ops-result-1.0`.
+
+## Сетка времени и масштаб
+
+`time.step_s === 300`, `1…288` шагов. КА: `1…48`. Заданий — сотни–тысячи (P02: 1208). `meta.id` — имя сценария на топбаре (`P01_intro`).
+
+## Спутник (карточка и инспектор)
+
+Поля: `id`, `capacity_wh`, SOC из `energy_wh/capacity_wh`, `temp_c`, `base_w`, `heater_w`, `calibration_w`, `downlink_w`, `relay_w`, `calibration_age_steps`.
+
+SOC vs `model.reserve_soc_pct` / `critical_soc_pct` → жёлтый / красный. `available() == false` (failure-интервал) → серый. Действия: `idle` | `calibrate` | `job` (+ `job_id`).
+
+Отклонённые команды — `reason` из `can_execute` / `step`: `energy_reserve`, `thermal_limit`, `calibration_required`, `no_contact`, `satellite_unavailable`, `ground_capacity`, …
+
+## Задание
+
+```text
+id, kind (downlink|relay), release_step, deadline_step, work_steps,
+eligible_satellites, priority (1..3), value_usd
+runtime: remaining_steps, completed_step
+```
+
+Статус UI: ждёт / в работе / выполнено / просрочено / невыполнимо. Downlink: ровно один eligible. X-Ray строить из `reason`, окон, SOC, калибровки, outage, `downlink_parallel_limit`.
+
+## Session API (backend)
+
+`observation()`, `apply_event()`, `advance(actions)`, `fork()`, `summary()`, `result()`. Событие только на текущем `k`. Выгрузка содержит `initial_scenario`, `events`, `commands`, `trace`, `summary`.
+
+Метрики зоны 5 брать из `summary()`: `critical_jobs_completed_on_time` / `critical_jobs_due`, `jobs_due_missed`, `revenue_usd`, `brownout_satellite_steps`, `below_reserve_satellite_steps`, `blocked_command_count`.

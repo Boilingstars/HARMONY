@@ -8,14 +8,14 @@ description: >-
 
 # HARMONY architecture
 
-One RL dispatcher over the organizers' model. `web/` is an empty placeholder for later browser visualization.
+One RL dispatcher over the organizers' model. The operator console in `web/` shows the loaded shift; the globe is a Kepler picture and does not assign jobs.
 
 ## Layout
 
-- `sim/ops/` — **verbatim copies** of `Кейс/model/resource_env.py` and `operations.py` plus `scenarios.py` (paths, event loading)
-- `sim/` — Kepler (future web, scenario generation), Basilisk (validate), coverage, condition
+- `sim/ops/` — **verbatim copies** of `task/model/resource_env.py` and `operations.py` plus `scenarios.py` (paths, event loading)
+- `sim/` — Kepler (orbit picture for the console; not charge or windows), Basilisk (validate), coverage, condition
 - `agent/` — Gym env on `Session`, attention policy, greedy, train/eval/baseline, telemetry, plots
-- `web/` — empty; no server yet
+- `web/` — console. Nginx serves the static UI on port 80; FastAPI keeps one scenario in memory and returns Kepler orbits. The agent is not called.
 
 ## Hard rules
 

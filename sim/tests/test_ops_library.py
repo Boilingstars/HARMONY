@@ -10,7 +10,7 @@ from sim.ops import P01_INTRO, P02_SHIFT, Environment, Session, load, validate
 from sim.ops.scenarios import DATA_DIR, EVENTS_DEMO, load_events, resolve_scenario
 
 _ROOT = Path(__file__).resolve().parents[2]
-_ORIGINAL = _ROOT / "Кейс" / "model"
+_ORIGINAL = _ROOT / "task" / "model"
 _COPIED = _ROOT / "sim" / "ops"
 
 
