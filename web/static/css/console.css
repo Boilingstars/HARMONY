@@ -114,6 +114,15 @@ button, input, select {
   padding: 0 8px 8px;
 }
 
+.brand {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.1;
+}
+
 /* Zone 1 */
 .shift-meta {
   display: flex;
@@ -703,6 +712,42 @@ button, input, select {
 }
 
 .goal-effect { margin-top: 12px; }
+
+.modal-goal { width: 520px; }
+
+.goal-wait {
+  margin-top: 8px;
+  color: var(--muted);
+}
+
+.goal-effect-table {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.goal-effect-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto auto;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.goal-effect-label { color: var(--muted); }
+.goal-effect-num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.5em;
+  text-align: right;
+}
+.goal-effect-arrow { color: var(--muted); }
+
+.modal .btn:disabled {
+  opacity: 0.45;
+  pointer-events: none;
+}
 
 .insp-body {
   flex: 1;

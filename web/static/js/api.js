@@ -281,3 +281,101 @@ async function readAlt(state) {
     }
   }
 }
+
+const whatifCache = new Map();
+const whatifInflight = new Map();
+
+export function clearWhatIf() {
+  whatifCache.clear();
+  whatifInflight.clear();
+}
+
+export function prefetchWhatIf({ step, goal, events = [], horizon = 10, background = false }) {
+  const sig = (events || []).map((ev) => `${ev.at_step}:${ev.id}`).join('|');
+  const key = `${step}|${goal}|${horizon}|${sig}`;
+  if (whatifCache.has(key)) {
+    const view = whatifCache.get(key);
+    return { key, view, done: Promise.resolve(view) };
+  }
+  if (whatifInflight.has(key)) return whatifInflight.get(key);
+  if (background && whatifInflight.size >= 2) {
+    const view = {
+      key, status: 'loading', step, horizon,
+      stayStep: step + horizon, frames: new Map(), error: '',
+    };
+    return { key, view, done: Promise.resolve(view) };
+  }
+  const view = {
+    key,
+    status: 'loading',
+    step,
+    horizon,
+    stayStep: step + horizon,
+    frames: new Map(),
+    error: '',
+  };
+  const handle = {
+    key,
+    view,
+    done: readWhatIf(view, { step, goal, events, horizon }).then((ready) => {
+      whatifInflight.delete(key);
+      if (ready.status === 'ready') whatifCache.set(key, ready);
+      return ready;
+    }),
+  };
+  whatifInflight.set(key, handle);
+  return handle;
+}
+
+async function readWhatIf(view, { step, goal, events, horizon }) {
+  try {
+    const res = await fetch('/api/dispatch/whatif', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ step, goal, events, horizon }),
+    });
+    if (!res.ok || !res.body) {
+      view.status = 'error';
+      view.error = await errorDetail(res, 'Не удалось сравнить политики');
+      return view;
+    }
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let nl = buf.indexOf('\n');
+      while (nl >= 0) {
+        const line = buf.slice(0, nl).trim();
+        buf = buf.slice(nl + 1);
+        nl = buf.indexOf('\n');
+        if (!line) continue;
+        const msg = JSON.parse(line);
+        if (msg.type === 'whatif_meta') {
+          view.stayStep = msg.stay_step;
+          view.horizon = msg.horizon;
+        } else if (msg.type === 'whatif' && msg.metrics) {
+          view.frames.set(msg.step, msg.metrics);
+          if (msg.stay_step != null) view.stayStep = msg.stay_step;
+        } else if (msg.type === 'error') {
+          view.status = 'error';
+          view.error = msg.detail || 'Не удалось сравнить политики';
+          return view;
+        }
+      }
+    }
+    if (!view.frames.has(view.stayStep) && view.frames.size) {
+      const last = Math.max(...view.frames.keys());
+      view.stayStep = last;
+    }
+    view.status = view.frames.size ? 'ready' : 'error';
+    if (view.status === 'error' && !view.error) view.error = 'Нет кадров сравнения';
+    return view;
+  } catch (err) {
+    view.status = 'error';
+    view.error = err && err.message ? err.message : 'Не удалось сравнить политики';
+    return view;
+  }
+}

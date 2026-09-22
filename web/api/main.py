@@ -18,7 +18,14 @@ from sim.coverage import eci_to_ecef
 from sim.kepler import KeplerWorld
 from sim.ops.resource_env import validate
 
-from web.api.dispatch import begin, iter_ndjson, packed_result, resume as resume_run
+from web.api.dispatch import (
+    WHATIF_HORIZON,
+    begin,
+    begin_whatif,
+    iter_ndjson,
+    packed_result,
+    resume as resume_run,
+)
 
 ALTITUDE_M = 500e3
 INCLINATION = math.radians(51.6)
@@ -26,7 +33,7 @@ ORBIT_SAMPLES = 64
 STEP_S = 300
 
 app = FastAPI(
-    title="HARMONY operator API",
+    title="Орби.tar operator API",
     docs_url=None,
     redoc_url=None,
     openapi_url=None,
@@ -225,18 +232,60 @@ def dispatch_resume(body: dict):
     events = body.get("events") or []
     if not isinstance(events, list):
         raise HTTPException(status_code=400, detail="events должен быть списком")
+    live_goal = _goal(body.get("goal"))
     try:
         run, start = resume_run(
-            _shift["scenario"], step, events, _goal(body.get("goal"))
+            _shift["scenario"], step, events, live_goal
         )
     except RuntimeError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    alt_goal = "priority" if live_goal == "revenue" else "revenue"
     try:
-        resume_run(_shift["scenario"], step, events, "revenue", alt=True)
+        resume_run(_shift["scenario"], step, events, alt_goal, alt=True)
     except RuntimeError:
         pass
     return StreamingResponse(
         iter_ndjson(run, from_index=start),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
+@app.post("/api/dispatch/whatif")
+def dispatch_whatif(body: dict):
+    """Развилка с шага k: префикс живого прогона, целевая сеть на horizon шагов."""
+    if _shift is None:
+        raise HTTPException(status_code=409, detail="Сценарий ещё не загружен")
+    steps = int(_shift["scenario"]["time"]["steps"])
+    try:
+        step = int(body.get("step", -1))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Шаг вне смены") from exc
+    if step < 0 or step > steps:
+        raise HTTPException(status_code=400, detail="Шаг вне смены")
+    events = body.get("events") or []
+    if not isinstance(events, list):
+        raise HTTPException(status_code=400, detail="events должен быть списком")
+    try:
+        horizon = int(body.get("horizon", WHATIF_HORIZON))
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="Неверный horizon") from exc
+    if horizon < 0:
+        raise HTTPException(status_code=400, detail="Неверный horizon")
+    try:
+        run = begin_whatif(
+            _shift["scenario"],
+            step,
+            events,
+            _goal(body.get("goal")),
+            horizon,
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return StreamingResponse(
+        iter_ndjson(run),
         media_type="application/x-ndjson",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
@@ -291,7 +340,7 @@ _WEB = Path(__file__).resolve().parents[1]
 def swagger_ui():
     return get_swagger_ui_html(
         openapi_url="/api/openapi.json",
-        title="HARMONY operator API",
+        title="Орби.tar operator API",
     )
 
 
@@ -299,7 +348,7 @@ def swagger_ui():
 def redoc_ui():
     return get_redoc_html(
         openapi_url="/api/openapi.json",
-        title="HARMONY operator API",
+        title="Орби.tar operator API",
     )
 
 

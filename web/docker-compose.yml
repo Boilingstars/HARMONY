@@ -6,10 +6,10 @@ services:
     restart: unless-stopped
     environment:
       HARMONY_MODEL: /models/ckpt_68120.zip
-      HARMONY_ALT_MODEL: /models/ckpt_22056.zip
+      HARMONY_ALT_MODEL: /models/ckpt_35714.zip
     volumes:
       - ../agent/runs/10_prior_smart_repair/checkpoints/ckpt_68120.zip:/models/ckpt_68120.zip:ro
-      - ../agent/runs/20260922-095910_P02_shift_revenue/checkpoints/ckpt_22056.zip:/models/ckpt_22056.zip:ro
+      - ../agent/runs/20260922-095910_P02_shift_revenue/checkpoints/ckpt_35714.zip:/models/ckpt_35714.zip:ro
 
   web:
     image: nginx:1.27-alpine

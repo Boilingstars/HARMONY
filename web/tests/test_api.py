@@ -296,12 +296,97 @@ def test_openapi_covers_api_routes():
         "/api/dispatch",
         "/api/dispatch/resume",
         "/api/dispatch/alt",
+        "/api/dispatch/whatif",
         "/api/result",
     ):
         assert route in paths
     frame = paths["/api/dispatch"]["get"]
     assert "ckpt_68120" in spec.json()["info"]["description"]
+    assert "ckpt_35714" in spec.json()["info"]["description"]
     yaml_body = client.get("/api/openapi.yaml")
     assert yaml_body.status_code == 200
     docs = client.get("/api/docs")
     assert docs.status_code == 200
+    assert "whatif" in spec.json()["paths"]["/api/dispatch/whatif"]["post"]["operationId"].lower()
+
+
+def test_whatif_replays_prefix_then_other_actor(monkeypatch):
+    """whatif с шага 5: сеть второй политики только с k, метрики k как у primary."""
+    import os
+
+    import numpy as np
+
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
+    os.environ["OPENBLAS_NUM_THREADS"] = "1"
+    from agent.greedy import greedy_action
+
+    import web.api.main as main_mod
+    from web.api import dispatch as dispatch_mod
+
+    primary = {"n": 0}
+    other = {"n": 0}
+
+    def actor_for(scenario):
+        limit = int(scenario["model"]["downlink_parallel_limit"])
+
+        def actor(obs, _limit=limit):
+            primary["n"] += 1
+            return greedy_action(obs, downlink_limit=_limit)
+
+        return actor
+
+    def actor_alt(scenario):
+        def actor(obs):
+            other["n"] += 1
+            mask = np.asarray(obs["mask"], dtype=bool)
+            n, width = mask.shape
+            return np.full(n, width - 2, dtype=np.int64)
+
+        return actor
+
+    monkeypatch.setattr(dispatch_mod, "actor_for", actor_for)
+    monkeypatch.setattr(dispatch_mod, "actor_for_alt", actor_alt)
+    dispatch_mod.clear()
+    main_mod._shift = None
+    data = json.loads(_P01.read_text(encoding="utf-8"))
+    client = TestClient(app)
+    missing = client.post("/api/dispatch/whatif", json={"step": 5, "goal": "revenue"})
+    assert missing.status_code == 409
+
+    assert client.post("/api/scenario", json=data).status_code == 200
+    first = client.get("/api/dispatch")
+    assert first.status_code == 200
+    primary_rows = [json.loads(line) for line in first.text.splitlines() if line.strip()]
+    frames = [row for row in primary_rows if row["type"] == "frame"]
+    n_primary = primary["n"]
+    other["n"] = 0
+
+    forked = client.post(
+        "/api/dispatch/whatif",
+        json={"step": 5, "goal": "revenue", "horizon": 10, "events": []},
+    )
+    assert forked.status_code == 200
+    rows = [json.loads(line) for line in forked.text.splitlines() if line.strip()]
+    meta = next(row for row in rows if row["type"] == "whatif_meta")
+    what = [row for row in rows if row["type"] == "whatif"]
+    assert meta["from_step"] == 5
+    assert meta["horizon"] == 10
+    assert meta["stay_step"] == 15
+    assert what[0]["step"] == 5
+    assert what[-1]["step"] == 15
+    assert primary["n"] == n_primary
+    assert other["n"] == 11
+    assert what[0]["metrics"] == frames[5]["metrics"]
+    assert what[-1]["metrics"] != frames[15]["metrics"]
+
+    again = client.post(
+        "/api/dispatch/whatif",
+        json={"step": 5, "goal": "revenue", "horizon": 10, "events": []},
+    )
+    assert again.text == forked.text
+    assert other["n"] == 11
+
+    second = client.get("/api/dispatch")
+    assert second.text == first.text
+

@@ -1,9 +1,9 @@
-const AHEAD = 10;
+import { AHEAD, deltaHtml, formatUsd } from '../metricsDelta.js';
 
 export function renderMetricsBar(el, state, actions) {
   const m = state.metrics;
   const d = state.metricsDelta || {};
-  const rev = (m.revenue_usd || 0).toLocaleString('ru-RU');
+  const rev = formatUsd(m.revenue_usd);
   const items = [
     {
       delta: d.completed,
@@ -50,16 +50,9 @@ export function renderMetricsBar(el, state, actions) {
       <div class="metrics-grid">
         <div><span class="k">Заданий всего</span><span class="v">${m.jobs_total}</span></div>
         <div><span class="k">Выполнено</span><span class="v">${m.jobs_completed}</span></div>
-        <div><span class="k">Потенциал</span><span class="v">$${(m.potential_revenue_usd || 0).toLocaleString('ru-RU')}</span></div>
+        <div><span class="k">Потенциал</span><span class="v">$${formatUsd(m.potential_revenue_usd)}</span></div>
       </div>
     </div>
   `;
   el.querySelector('[data-toggle]').addEventListener('click', actions.toggleMetrics);
-}
-
-function deltaHtml(delta) {
-  if (!delta) return '<span class="met-delta is-flat">—</span>';
-  if (delta.flat) return `<span class="met-delta is-flat">${delta.pct}%</span>`;
-  const arrow = delta.dir === 'up' ? '↗' : '↘';
-  return `<span class="met-delta is-${delta.dir}">${delta.pct}% ${arrow}</span>`;
 }

@@ -1,4 +1,4 @@
-import { mountSplash } from './views/SplashScreen.js?v=palette1';
+import { mountSplash } from './views/SplashScreen.js?v=orbit1';
 import { beginTransfer, endTransfer } from './transferOverlay.js?v=resume-events';
 
 const splashRoot = document.getElementById('splash-root');
@@ -27,8 +27,8 @@ mountSplash(splashRoot, {
     try {
       const [{ snapshotFromScenario }, { startConsole }, { postScenario, onTrack, onDispatch }] = await Promise.all([
         import('./scenario.js'),
-        import('./consoleApp.js?v=job-green'),
-        import('./api.js?v=delta1'),
+        import('./consoleApp.js?v=orbit1'),
+        import('./api.js?v=whatif1'),
       ]);
       const listed = await postScenario(scenario);
       const tracksReady = waitFirst(onTrack, (msg) => msg.type === 'orbits' || msg.type === 'error');

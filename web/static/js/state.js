@@ -24,6 +24,8 @@ export function createState(snapshot) {
     eventMenuOpen: false,
     eventComposeAt: snapshot.step ?? 0,
     pendingObjective: null,
+    whatIf: null,
+    switchingGoal: false,
     notice: '',
     compareOpen: false,
   };

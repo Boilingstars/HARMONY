@@ -3,18 +3,19 @@ import {
   importOperatorEvents, patchOperatorEvent, addEventJob as appendEventJob,
   removeEventJob as dropEventJob, commitOperatorEvents, wireEvent,
 } from './state.js';
-import { renderTopBar } from './layout/TopBar.js';
+import { renderTopBar } from './layout/TopBar.js?v=orbit1';
 import { renderSatelliteTree } from './layout/SatelliteTree.js?v=palette1';
-import { renderCenterStage } from './layout/CenterStage.js?v=job-green';
+import { renderCenterStage } from './layout/CenterStage.js?v=whatif1';
 import { renderInspector } from './layout/Inspector.js?v=palette1';
-import { renderMetricsBar } from './layout/MetricsBar.js?v=delta1';
+import { renderMetricsBar } from './layout/MetricsBar.js?v=whatif1';
 import { renderLoadModal } from './views/LoadModal.js';
-import { renderGoalModal } from './views/GoalModal.js';
+import { renderGoalModal } from './views/GoalModal.js?v=whatif1';
 import { renderCompareView } from './views/CompareView.js';
-import { applyDispatch, watchDispatch } from './dispatchView.js?v=delta1';
-import { resumeDispatch } from './api.js?v=delta1';
+import { applyDispatch, watchDispatch } from './dispatchView.js?v=whatif1';
+import { resumeDispatch, prefetchWhatIf, clearWhatIf, dispatchSnapshot } from './api.js?v=whatif1';
 import { beginTransfer, endTransfer } from './transferOverlay.js?v=resume-events';
 import { loadMarkCatalog } from './timelineMarks.js';
+import { AHEAD, uiToGoal, oppositeUi } from './metricsDelta.js';
 
 const els = {
   console: document.getElementById('console'),
@@ -90,15 +91,24 @@ const actions = {
     if (v === state.objective) return;
     state.pendingObjective = v;
     state.overflowOpen = false;
+    askWhatIf(state.step);
     render();
   },
-  confirmObjective() {
-    if (state.pendingObjective) state.objective = state.pendingObjective;
+  async confirmObjective() {
+    if (!state.pendingObjective) return;
+    const snap = dispatchSnapshot();
+    if (!snap || !snap.frames.has(state.step)) return;
+    const next = state.pendingObjective;
+    state.objective = next;
     state.pendingObjective = null;
+    state.whatIf = null;
+    render();
+    await switchPolicy(state.step);
     render();
   },
   cancelObjective() {
     state.pendingObjective = null;
+    state.whatIf = null;
     render();
   },
   clearNotice() {
@@ -136,6 +146,7 @@ const actions = {
     state.overflowOpen = false;
     state.eventComposeAt = state.step;
     state.eventMenuOpen = false;
+    warmupWhatIf(state.step);
     render();
   },
   toggleOverflow() { state.overflowOpen = !state.overflowOpen; render(); },
@@ -263,6 +274,7 @@ export async function startConsole(snapshot) {
   );
   els.console.hidden = false;
   render();
+  warmupWhatIf(state.step);
   window.addEventListener('resize', () => renderCenterStage(state, actions, els.d3, els.timeline));
 }
 
@@ -291,6 +303,7 @@ async function recalculateFrom(k, view) {
   stepping = true;
   beginTransfer();
   try {
+    clearWhatIf();
     const job = resumeDispatch({
       step: k,
       events,
@@ -298,6 +311,7 @@ async function recalculateFrom(k, view) {
     });
     await job.whenFrame(view);
     state.resumedSig = sig;
+    warmupWhatIf(view);
     return true;
   } catch (err) {
     if (err && err.name === 'AbortError') return false;
@@ -324,7 +338,77 @@ async function goForward() {
   state.selectedMark = null;
   state.eventComposeAt = next;
   state.eventMenuOpen = false;
+  warmupWhatIf(next);
   return true;
+}
+
+function goalOf(obj) {
+  return uiToGoal(obj);
+}
+
+function askWhatIf(step) {
+  if (!state || !state.pendingObjective) return;
+  const handle = prefetchWhatIf({
+    step,
+    goal: goalOf(state.pendingObjective),
+    events: committedEvents(),
+    horizon: AHEAD,
+  });
+  state.whatIf = handle.view;
+  handle.done.then((view) => {
+    if (!state || state.pendingObjective == null) return;
+    if (state.whatIf && state.whatIf.key !== view.key) return;
+    state.whatIf = view;
+    render();
+  });
+}
+
+function warmupWhatIf(step) {
+  if (!state) return;
+  const max = state.scenario.steps;
+  const at = Math.max(0, Math.min(max, step));
+  prefetchWhatIf({
+    step: at,
+    goal: goalOf(oppositeUi(state.objective)),
+    events: committedEvents(),
+    horizon: AHEAD,
+    background: true,
+  });
+  if (state.running && at + 1 <= max) {
+    prefetchWhatIf({
+      step: at + 1,
+      goal: goalOf(oppositeUi(state.objective)),
+      events: committedEvents(),
+      horizon: AHEAD,
+      background: true,
+    });
+  }
+}
+
+async function switchPolicy(k) {
+  if (stepping) return false;
+  stepping = true;
+  state.switchingGoal = true;
+  beginTransfer();
+  try {
+    clearWhatIf();
+    const job = resumeDispatch({
+      step: k,
+      events: committedEvents(),
+      goal: state.objective === 'money' ? 'revenue' : 'priority',
+    });
+    await job.whenFrame(k);
+    warmupWhatIf(k);
+    return true;
+  } catch (err) {
+    if (err && err.name === 'AbortError') return false;
+    state.notice = err && err.message ? err.message : 'Не удалось сменить политику';
+    return false;
+  } finally {
+    state.switchingGoal = false;
+    stepping = false;
+    endTransfer();
+  }
 }
 
 function applyEventField(ev, field, value, index) {

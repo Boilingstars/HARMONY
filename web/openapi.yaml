@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: HARMONY operator API
+  title: Орби.tar operator API
   version: "1.0"
   description: |
     HTTP-контракт пульта. Nginx на порту 80 проксирует `/api/` в FastAPI.
@@ -23,8 +23,12 @@ info:
     (копия `agent/models/ops_priority.zip`). Argmax не используем: почти всегда idle.
 
     Вторая политика (нижняя сводка: выручка и выполненные задания):
-    `HARMONY_ALT_MODEL` → `ckpt_22056.zip` прогона `20260922-095910_P02_shift_revenue`.
+    `HARMONY_ALT_MODEL` → `ckpt_35714.zip` прогона `20260922-095910_P02_shift_revenue`.
     Считается при загрузке JSON и снова только после операторского события.
+
+    Развилка «сменить политику сейчас» (`POST /api/dispatch/whatif`): префикс
+    живого прогона до k, затем целевая сеть на 10 шагов. Живой кеш не трогает.
+    Чекпоинт по `goal`: priority → `ckpt_68120`, revenue → `ckpt_35714`.
 
     Метки таймлайна и «Преимущество текущей политики» считает **клиент**
     (`web/src/timeline-marks.json`, `q` кадра), не этот API.
@@ -54,8 +58,8 @@ x-checkpoint:
 
 x-checkpoint-alt:
   env: HARMONY_ALT_MODEL
-  file: /models/ckpt_22056.zip
-  host_path: agent/runs/20260922-095910_P02_shift_revenue/checkpoints/ckpt_22056.zip
+  file: /models/ckpt_35714.zip
+  host_path: agent/runs/20260922-095910_P02_shift_revenue/checkpoints/ckpt_35714.zip
   run: 20260922-095910_P02_shift_revenue
   goal: revenue
   policy: agent.policy.ops_policy.OpsAttentionPolicy
@@ -194,9 +198,11 @@ paths:
         Тики 0…k−1 — сохранённые команды, сеть не вызывается.
         На шаге k в `scripted_events` попадают уже принятые операторские
         сообщения (`cosmo-B-events-1.0`, без UI-полей); `apply_event` до действия.
-        Сэмпл PPO только с k. Левая часть кривой на клиенте не откатывается.
-        Параллельно переигрывается вторая политика (`HARMONY_ALT_MODEL`, goal revenue);
-        её поток — `GET /api/dispatch/alt`.
+        Сэмпл PPO только с k. Чекпоинт выбирается по `goal`:
+        `priority` → `HARMONY_MODEL` (`ckpt_68120`), `revenue` → `HARMONY_ALT_MODEL`
+        (`ckpt_35714`). Левая часть кривой на клиенте не откатывается.
+        Параллельно переигрывается противоположная политика; её поток —
+        `GET /api/dispatch/alt`.
       operationId: resumeDispatch
       requestBody:
         required: true
@@ -230,7 +236,7 @@ paths:
       summary: Поток второй политики
       description: |
         NDJSON компактных кадров `{type: alt, step, metrics}` той же смены,
-        но сэмпл `HARMONY_ALT_MODEL` (`ckpt_22056`, цель revenue).
+        но сэмпл `HARMONY_ALT_MODEL` (`ckpt_35714`, цель revenue).
         Стартует при загрузке JSON. Переигрывается только вместе с
         `POST /api/dispatch/resume` после события оператора.
         Клиент сравнивает выручку и число выполненных заданий с этим потоком
@@ -245,6 +251,45 @@ paths:
                 $ref: "#/components/schemas/AltDispatchStream"
         "409":
           description: Сценарий не загружен
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/dispatch/whatif:
+    post:
+      tags: [dispatch]
+      summary: Развилка политики с шага k
+      description: |
+        Общий префикс 0…k−1 — команды живого прогона (сеть на префиксе не
+        вызывается). С шага k сэмпл целевой сети (`goal`: `priority` →
+        `HARMONY_MODEL` / `ckpt_68120`, `revenue` → `HARMONY_ALT_MODEL` /
+        `ckpt_35714`) на `horizon` шагов (по умолчанию 10) или до конца смены.
+        Живой кеш не останавливается и не обрезается. Ответ — NDJSON
+        `{type: whatif, step, horizon, stay_step, metrics}` на k…k+horizon.
+        x-source: ppo целевого чекпоинта + physics.
+      operationId: whatifDispatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DispatchWhatIf"
+      responses:
+        "200":
+          description: NDJSON whatif_meta + whatif
+          content:
+            application/x-ndjson:
+              schema:
+                $ref: "#/components/schemas/WhatIfDispatchStream"
+        "400":
+          description: Шаг вне смены или неверный horizon/events
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "409":
+          description: Сценарий не загружен или прогон ещё не дошёл до k
           content:
             application/json:
               schema:
@@ -464,6 +509,33 @@ components:
           items:
             $ref: "#/components/schemas/WireEvent"
 
+    DispatchWhatIf:
+      type: object
+      required: [step, goal]
+      properties:
+        step:
+          type: integer
+          minimum: 0
+          description: Шаг k, с которого считается смена политики
+          x-source: operator
+        goal:
+          type: string
+          enum: [priority, revenue, priorities, money]
+          description: Целевая политика развилки (не текущая)
+          x-source: operator
+        horizon:
+          type: integer
+          minimum: 0
+          default: 10
+          description: Сколько шагов прогнать целевой сетью. По умолчанию 10.
+          x-source: operator
+        events:
+          type: array
+          description: Уже принятые операторские события, как у resume
+          x-source: operator
+          items:
+            $ref: "#/components/schemas/WireEvent"
+
     WireEvent:
       type: object
       required: [id, at_step, type]
@@ -515,6 +587,36 @@ components:
       properties:
         type: { type: string, enum: [alt] }
         step: { type: integer, x-source: physics }
+        metrics:
+          $ref: "#/components/schemas/DispatchMetrics"
+
+    WhatIfDispatchStream:
+      description: |
+        Строки NDJSON развилки. `whatif` — накопитель метрик на шаге после
+        префикса живого прогона и сэмпла целевой сети.
+        x-source: ppo целевого чекпоинта + physics.
+      oneOf:
+        - $ref: "#/components/schemas/WhatIfDispatchMeta"
+        - $ref: "#/components/schemas/WhatIfDispatchFrame"
+        - $ref: "#/components/schemas/DispatchError"
+
+    WhatIfDispatchMeta:
+      type: object
+      properties:
+        type: { type: string, enum: [whatif_meta] }
+        steps: { type: integer, x-source: scenario }
+        horizon: { type: integer, x-source: operator }
+        from_step: { type: integer, x-source: operator }
+        stay_step: { type: integer, x-source: operator }
+
+    WhatIfDispatchFrame:
+      type: object
+      required: [type, step, metrics]
+      properties:
+        type: { type: string, enum: [whatif] }
+        step: { type: integer, x-source: physics }
+        horizon: { type: integer, x-source: operator }
+        stay_step: { type: integer, x-source: operator }
         metrics:
           $ref: "#/components/schemas/DispatchMetrics"
 

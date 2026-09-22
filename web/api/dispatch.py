@@ -29,7 +29,11 @@ _models: dict[str, object] = {}
 _model_lock = threading.Lock()
 _ALT_KEY = "|alt"
 _PRIMARY_MODEL = "/models/ckpt_68120.zip"
-_ALT_MODEL = "/models/ckpt_22056.zip"
+_ALT_MODEL = "/models/ckpt_35714.zip"
+WHATIF_HORIZON = 10
+_WHATIF_MAX = 16
+_whatif_cache: OrderedDict[str, "Run"] = OrderedDict()
+_whatif_lock = threading.Lock()
 
 _ACTION = {"idle": 0, "job": 1, "calibrate": 2}
 
@@ -50,6 +54,12 @@ class Run:
 def clear() -> None:
     with _cache_lock:
         _cache.clear()
+    clear_whatif()
+
+
+def clear_whatif() -> None:
+    with _whatif_lock:
+        _whatif_cache.clear()
 
 
 def actor_for(scenario: dict) -> Actor:
@@ -60,6 +70,13 @@ def actor_for(scenario: dict) -> Actor:
 def actor_for_alt(scenario: dict) -> Actor:
     """Сэмпл второй политики (выручка, HARMONY_ALT_MODEL)."""
     return _actor(_alt_path())
+
+
+def actor_for_goal(scenario: dict, goal: str = "priority") -> Actor:
+    """priority → ckpt_68120, revenue → ckpt_35714."""
+    if _goal(goal) == "revenue":
+        return actor_for_alt(scenario)
+    return actor_for(scenario)
 
 
 def _actor(path: str) -> Actor:
@@ -112,6 +129,7 @@ def resume(
     alt: bool = False,
 ) -> tuple[Run, int]:
     """Хвост с k: прошлое — сохранённые команды, сеть только с текущего шага."""
+    clear_whatif()
     origin = begin(scenario, goal, alt=alt)
     with origin.cond:
         while not origin.done and len(origin.actions) < step:
@@ -146,6 +164,67 @@ def resume(
     return origin, start
 
 
+def begin_whatif(
+    scenario: dict,
+    step: int,
+    events: list[dict] | None,
+    goal: str = "revenue",
+    horizon: int = WHATIF_HORIZON,
+) -> Run:
+    """Развилка: префикс живого прогона, с k — целевая сеть на horizon шагов.
+
+    Живой Run не останавливается и не обрезается.
+    """
+    target = _goal(goal)
+    hz = int(horizon)
+    if hz < 0:
+        raise ValueError("horizon")
+    key = (
+        f"{digest(scenario)}|{int(step)}|{hz}|{target}|"
+        f"{digest(list(events or []))}"
+    )
+    with _whatif_lock:
+        cached = _whatif_cache.get(key)
+        if cached is not None:
+            _whatif_cache.move_to_end(key)
+            return cached
+    replay = _wait_live_actions(scenario, int(step))
+    with _whatif_lock:
+        cached = _whatif_cache.get(key)
+        if cached is not None:
+            _whatif_cache.move_to_end(key)
+            return cached
+        run = Run(key)
+        _whatif_cache[key] = run
+        _evict_whatif()
+        threading.Thread(
+            target=_whatif_worker,
+            args=(run, scenario, target, list(events or []), replay, int(step), hz),
+            daemon=True,
+        ).start()
+        return run
+
+
+def _wait_live_actions(scenario: dict, step: int) -> list[np.ndarray]:
+    origin = begin(scenario)
+    with origin.cond:
+        while not origin.done and len(origin.actions) < step:
+            origin.cond.wait(timeout=1.0)
+        if origin.error:
+            raise RuntimeError(origin.error)
+        if len(origin.actions) < step:
+            raise RuntimeError("Прогон ещё не дошёл до этого шага")
+        return [np.asarray(a, dtype=np.int64) for a in origin.actions[:step]]
+
+
+def _evict_whatif() -> None:
+    while len(_whatif_cache) > _WHATIF_MAX:
+        key, run = next(iter(_whatif_cache.items()))
+        if not run.done:
+            return
+        _whatif_cache.pop(key)
+
+
 def iter_ndjson(run: Run, from_index: int = 0) -> Iterator[bytes]:
     pos = max(0, int(from_index))
     while True:
@@ -174,6 +253,10 @@ def iter_events(
     from_step: int = 0,
     run: Run | None = None,
     compact: bool = False,
+    compact_type: str = "alt",
+    until_step: int | None = None,
+    horizon: int | None = None,
+    stay_step: int | None = None,
 ) -> Iterator[dict]:
     """Кадр k — состояние при env.k == k. Действие на k > 0 — команда тика k - 1."""
     from agent.env.ops_env import EventConfig, OpsEnv
@@ -195,8 +278,22 @@ def iter_events(
     cat.sync(phys)
     tally = _Tally()
     reserve = float(scenario["model"]["reserve_soc_pct"])
+    kind = compact_type if compact_type in ("alt", "whatif") else "alt"
+    stay = int(stay_step) if stay_step is not None else start_k
+    hz = int(horizon) if horizon is not None else 0
 
-    yield _meta(scenario, cat) if not compact else {"type": "alt_meta", "steps": steps}
+    if not compact:
+        yield _meta(scenario, cat)
+    elif kind == "whatif":
+        yield {
+            "type": "whatif_meta",
+            "steps": steps,
+            "horizon": hz,
+            "from_step": start_k,
+            "stay_step": stay,
+        }
+    else:
+        yield {"type": "alt_meta", "steps": steps}
 
     def take(obs_now: dict) -> tuple[np.ndarray, float]:
         out = actor(obs_now)
@@ -232,8 +329,19 @@ def iter_events(
     def emit(step: int, rows: list[dict] | None, value_now: float) -> dict:
         frame = _frame(step, phys, cat, rows, tally, value_now, reserve)
         if compact:
-            return {"type": "alt", "step": int(frame["step"]), "metrics": frame["metrics"]}
+            payload = {
+                "type": kind,
+                "step": int(frame["step"]),
+                "metrics": frame["metrics"],
+            }
+            if kind == "whatif":
+                payload["horizon"] = hz
+                payload["stay_step"] = stay
+            return payload
         return frame
+
+    def past_horizon() -> bool:
+        return until_step is not None and int(phys.k) >= int(until_step)
 
     if start_k == 0:
         action, value = take(obs)
@@ -262,7 +370,7 @@ def iter_events(
             return
 
     while phys.k < steps:
-        if stopped():
+        if stopped() or past_horizon():
             break
         assert action is not None
         start = len(phys.trace)
@@ -308,7 +416,7 @@ def _worker(
             import torch
 
             torch.manual_seed(0)
-            holder["fn"] = actor_for_alt(scenario) if alt else actor_for(scenario)
+            holder["fn"] = actor_for_goal(scenario, goal)
         return holder["fn"](obs)
 
     try:
@@ -332,6 +440,57 @@ def _worker(
                 with run.cond:
                     run.result_size = len(raw)
                     run.result_bytes = raw if len(raw) <= RESULT_LIMIT else None
+                continue
+            with run.cond:
+                run.events.append(event)
+                run.cond.notify_all()
+    except Exception as exc:
+        with run.cond:
+            run.error = str(exc)
+    finally:
+        with run.cond:
+            run.done = True
+            run.cond.notify_all()
+
+
+def _whatif_worker(
+    run: Run,
+    scenario: dict,
+    goal: str,
+    scripted: list[dict],
+    replay: list[np.ndarray],
+    from_step: int,
+    horizon: int,
+) -> None:
+    _quiet_torch()
+    holder: dict[str, Actor] = {}
+    steps = int(scenario["time"]["steps"])
+    stay = min(int(from_step) + int(horizon), steps)
+
+    def actor(obs: dict):
+        if "fn" not in holder:
+            import torch
+
+            torch.manual_seed(0)
+            holder["fn"] = actor_for_goal(scenario, goal)
+        return holder["fn"](obs)
+
+    try:
+        for event in iter_events(
+            scenario,
+            actor,
+            goal=goal,
+            scripted_events=scripted,
+            replay_actions=replay,
+            from_step=from_step,
+            run=run,
+            compact=True,
+            compact_type="whatif",
+            until_step=stay,
+            horizon=horizon,
+            stay_step=stay,
+        ):
+            if event.get("type") == "_journal":
                 continue
             with run.cond:
                 run.events.append(event)

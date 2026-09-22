@@ -4,6 +4,7 @@ export function renderTopBar(el, state, actions) {
   const steps = state.scenario.steps;
   const hours = formatShiftDuration(steps, state.scenario.step_s);
   el.innerHTML = `
+    <span class="brand" aria-label="Орби.tar">Орби.tar</span>
     <div class="shift-meta">
       <span class="scenario-id">${state.scenario.id}</span>
       <span class="step-readout">Длительность смены · <span class="num">${steps}</span> шагов (<span class="num">${hours}</span>)</span>

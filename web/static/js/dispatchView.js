@@ -1,4 +1,5 @@
-import { dispatchSnapshot, onDispatch } from './api.js?v=delta1';
+import { dispatchSnapshot, onDispatch } from './api.js?v=whatif1';
+import { AHEAD, vsAhead, vsAlt } from './metricsDelta.js';
 
 const ACTIONS = ['idle', 'job', 'calibrate'];
 
@@ -177,8 +178,6 @@ function statusOf(spec, dyn, step) {
   return 'waiting';
 }
 
-const AHEAD = 10;
-
 function resolveMetricsDelta(snap, view, now) {
   const laterStep = Math.min(view + AHEAD, snap.meta.steps);
   const later = snap.frames.get(laterStep);
@@ -191,25 +190,4 @@ function resolveMetricsDelta(snap, view, now) {
     reserve: vsAhead(now.below_reserve_satellite_steps, later && later.metrics.below_reserve_satellite_steps, true),
     blocked: null,
   };
-}
-
-function vsAhead(now, next, invert) {
-  if (next == null) return null;
-  return relDelta(now, next, invert);
-}
-
-function vsAlt(ours, theirs, invert) {
-  if (theirs == null) return null;
-  return relDelta(theirs, ours, invert);
-}
-
-function relDelta(from, to, invert) {
-  const a = Number(from) || 0;
-  const b = Number(to) || 0;
-  const diff = b - a;
-  if (Math.abs(diff) < 1e-9) return { pct: 0, dir: 'up', flat: true };
-  const base = Math.abs(a) < 1e-9 ? Math.abs(b) : Math.abs(a);
-  const pct = Math.round((Math.abs(diff) / Math.max(base, 1e-9)) * 100);
-  const better = invert ? diff < 0 : diff > 0;
-  return { pct, dir: better ? 'up' : 'down', flat: false };
 }

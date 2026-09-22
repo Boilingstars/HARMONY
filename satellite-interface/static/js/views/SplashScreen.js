@@ -99,7 +99,7 @@ export function mountSplash(root, { onStartShift }) {
     root.innerHTML = `
       <div class="splash">
         <div class="splash-panel">
-          <h1>HARMONY</h1>
+          <h1>Орби.tar</h1>
           <p class="splash-lead">Автономное управление спутниковой группировкой</p>
 
           <div class="splash-drop" data-drop tabindex="0">

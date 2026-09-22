@@ -1,8 +1,8 @@
 import { formatClock } from '../status.js?v=palette1';
 import { buildSignalSvg, curveAdvantagePct } from '../timelineSignal.js?v=tl-adv';
 import { detectMarks } from '../timelineMarks.js';
-import { dispatchSnapshot } from '../api.js?v=delta1';
-import { syncGlobe } from '../globe.js?v=job-green';
+import { dispatchSnapshot } from '../api.js?v=whatif1';
+import { syncGlobe } from '../globe.js?v=whatif1';
 
 export function renderCenterStage(state, actions, d3El, tlEl) {
   syncGlobe(d3El, state, actions);
